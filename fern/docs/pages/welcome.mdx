@@ -1,73 +1,105 @@
 ---
-title: Welcome to Plant Store API
-subtitle: Everything you need to build plant retail experiences
+title: Welcome to Sunny Agents SDK
+subtitle: Build healthcare concierge experiences with AI-powered chat
 slug: welcome
 ---
 
-The Plant Store API provides a complete platform for building plant retail applications. From catalog management and inventory tracking to order processing and customer relationships, our API handles the complexity so you can focus on creating great experiences.
+The Sunny Agents SDK is a TypeScript/JavaScript library designed specifically for building healthcare applications. Embed AI-powered chat experiences that help patients find providers, book appointments, get health information, and navigate care—all in real-time. Whether you need a drop-in widget or want to build a custom UI, the SDK provides everything you need for secure, streaming healthcare conversations.
 
 ## Quick links
 
 <CardGroup cols={2}>
-  <Card
-    title="Overview"
-    icon="duotone book-open"
-    href="/overview"
-  >
-    Understand what you can build with the Plant Store API
+  <Card title="Overview" icon="duotone book-open" href="/overview">
+    Understand what you can build with the Sunny Agents SDK
   </Card>
-  <Card
-    title="Quickstart"
-    icon="duotone rocket"
-    href="/quickstart"
-  >
-    Make your first API request in minutes
+  <Card title="Quickstart" icon="duotone rocket" href="/quickstart">
+    Get up and running in minutes
   </Card>
-  <Card
-    title="Tutorials"
-    icon="duotone book-sparkles"
-    href="/searching-plants"
-  >
-    Step-by-step guides for common workflows
+  <Card title="Tutorials" icon="duotone book-sparkles" href="/widget-setup">
+    Step-by-step integration guides
   </Card>
-  <Card
-    title="API Reference"
-    icon="duotone code"
-    href="/api-reference"
-  >
-    Complete endpoint documentation and schemas
+  <Card title="API Reference" icon="duotone code" href="/api-reference">
+    Complete SDK documentation and types
   </Card>
 </CardGroup>
 
 ## Core capabilities
 
-Build complete plant retail operations with these integrated capabilities:
+Build rich chat experiences with these integrated capabilities:
 
-| Capability | What you can do |
-|------------|-----------------|
-| **Plant management** | Organize your catalog with categories, tags, and rich metadata |
-| **Order processing** | Handle the complete lifecycle from cart to delivery |
-| **Customer management** | Build relationships with profiles, preferences, and history |
-| **Inventory tracking** | Maintain accurate stock with real-time updates and alerts |
+| Capability         | What you can do                                            |
+| ------------------ | ---------------------------------------------------------- |
+| **Messaging**      | Send messages and receive streaming responses in real-time |
+| **Conversations**  | Manage multiple conversations with state persistence       |
+| **Authentication** | Secure token exchange for authenticated sessions           |
+| **Artifacts**      | Fetch and render rich content like doctor profiles         |
 
 <Tip>
-New to the Plant Store API? Start with the [Overview](/overview) to understand the platform, then follow the [Quickstart](/quickstart) to make your first API call.
+  New to the Sunny Agents SDK? Start with the [Overview](/overview) to
+  understand the platform, then follow the [Quickstart](/quickstart) to make
+  your first API call.
 </Tip>
 
 ## What you can build
 
-- **E-commerce websites** - Online storefronts with real-time inventory and checkout
-- **Mobile applications** - Native iOS and Android shopping experiences
-- **Inventory systems** - Multi-location stock tracking and management
-- **Admin dashboards** - Internal tools for catalog and order management
+- **Healthcare concierge applications** - Help patients find in-network providers and book appointments instantly
+- **Provider search interfaces** - Enable patients to search for doctors by specialty, location, and availability
+- **Health information assistants** - Provide reliable health information and support 24/7
+- **Appointment booking systems** - Streamline appointment scheduling with AI-powered guidance
+- **Benefits navigation tools** - Help employees and members understand and access their healthcare benefits
+
+## Installation
+
+Get started in seconds:
+
+```bash
+npm install @sunnyhealthai/agents-sdk
+# or
+pnpm add @sunnyhealthai/agents-sdk
+# or
+yarn add @sunnyhealthai/agents-sdk
+```
+
+## Two ways to integrate
+
+### Option 1: Drop-in Widget
+
+The fastest way to add chat to your app:
+
+```typescript
+import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+attachSunnyChat({
+  container: document.getElementById("chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+});
+```
+
+### Option 2: Headless Client
+
+Build a custom UI with full control:
+
+```typescript
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+});
+
+await client.sendMessage("I need to find a cardiologist near me");
+```
 
 ## Get support
 
 Have questions or need help? We're here for you:
 
-- **Documentation issues** - [Open an issue on GitHub](https://github.com/fern-api/docs-starter-openapi/issues)
-- **General support** - [Email our team](mailto:support+plantstore@buildwithfern.com)
-- **Community** - [Join our Slack](https://join.slack.com/t/fern-community/shared_invite/zt-2q7ev4mki-mhO5anKslwRowp4oExWf4A)
+- **Documentation issues** - [Open an issue on GitHub](https://github.com/sunnyhealthai/agents-sdk/issues)
+- **General support** - [Email our team](mailto:support@sunnyhealthai.com)
+- **TypeScript types** - Full type definitions included
 
 ---
 

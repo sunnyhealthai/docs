@@ -1,126 +1,195 @@
 ---
 title: Overview
-subtitle: Welcome to the Plant Store API
+subtitle: Everything you need to know about the Sunny Agents SDK
 slug: overview
 ---
 
-The Plant Store API is a complete e-commerce platform designed for plant retailers. It handles everything from catalog management and inventory tracking to order processing and customer relationships.
+The Sunny Agents SDK is a TypeScript/JavaScript library that enables you to embed AI-powered chat experiences into any web application. It provides both a headless client for custom UI implementations and a ready-to-use vanilla JavaScript widget for quick integration.
 
 ## What you can build
 
-The Plant Store API provides the building blocks for plant retail operations:
+The SDK is designed specifically for healthcare applications:
 
 <CardGroup cols={2}>
-  <Card title="E-commerce websites" icon="duotone store">
-    Build online storefronts with real-time inventory, shopping carts, and checkout flows.
+  <Card title="Provider search & booking" icon="duotone stethoscope">
+    Help patients find in-network providers by specialty, location, and availability. Book appointments in seconds with AI-powered guidance.
   </Card>
-  <Card title="Mobile apps" icon="duotone mobile">
-    Create native iOS and Android apps for browsing plants and placing orders.
+  <Card title="Health information assistant" icon="duotone heart-pulse">
+    Provide reliable health information and support 24/7. Answer questions about symptoms, medications, and care options.
   </Card>
-  <Card title="Inventory systems" icon="duotone boxes-stacked">
-    Track stock across multiple locations with automated reorder alerts.
+  <Card title="Benefits navigation" icon="duotone shield-heart">
+    Guide employees and members through their healthcare benefits. Help them understand coverage and find cost-effective care options.
   </Card>
-  <Card title="Admin dashboards" icon="duotone chart-line">
-    Manage your catalog, process orders, and analyze customer behavior.
+  <Card title="Care coordination" icon="duotone user-doctor">
+    Streamline care coordination by connecting patients with the right providers at the right time, reducing ER visits and improving outcomes.
   </Card>
 </CardGroup>
 
 ## Core capabilities
 
-The API is organized around four main capabilities, each handling a specific aspect of plant retail:
+The SDK is organized around four main capabilities:
 
 <CardGroup cols={2}>
-  <Card title="Plant management" icon="duotone seedling" href="/plant-management">
-    Create and organize your plant catalog with rich metadata, images, and categorization. Control availability status as inventory changes and enable customers to search and filter by care level, environment, or tags.
+  <Card title="Messaging" icon="duotone message" href="/messaging">
+    Send messages and receive streaming responses in real-time. Support file attachments, markdown rendering, and rich content formatting. Handle message events and streaming updates with ease.
   </Card>
-  <Card title="Order processing" icon="duotone cart-shopping" href="/order-processing">
-    Handle the complete order lifecycle from purchase through delivery. Process payments, track fulfillment status, and manage cancellations and refunds. Every order automatically reserves inventory to prevent overselling.
+  <Card title="Conversations" icon="duotone comments" href="/conversations">
+    Manage multiple conversations with state persistence. Create, switch between, and manage conversation history. Support both server-persisted and local-only conversations.
   </Card>
-  <Card title="Customer management" icon="duotone users" href="/customer-management">
-    Build lasting relationships with detailed customer profiles, order history, and communication preferences. Support multiple shipping addresses, track purchase patterns, and segment customers for targeted marketing.
+  <Card title="Authentication" icon="duotone lock" href="/authentication">
+    Secure token exchange flow for authenticated sessions. Support for ID token providers (Auth0, Firebase, etc.) with automatic token refresh. Anonymous mode for local-only conversations.
   </Card>
-  <Card title="Inventory tracking" icon="duotone boxes-stacked" href="/inventory-tracking">
-    Maintain accurate stock levels across all sales channels with real-time updates. Set automated reorder alerts, reserve inventory for pending orders, and track changes with comprehensive audit trails.
+  <Card title="Artifacts" icon="duotone box" href="/artifacts">
+    Fetch and render rich content objects like doctor profiles, structured data, and custom artifacts. Automatic caching for performance. Type-safe artifact handling.
   </Card>
 </CardGroup>
 
 ## How it works
 
-When a customer browses your catalog, the plant management system handles search and filtering. Creating an order triggers the order processing system, which validates payment. On successful payment, inventory tracking reserves stock and manages fulfillment. Throughout the process, customer management sends notifications and maintains order history. If payment fails, the system cancels the order and notifies the customer automatically.
+The SDK connects to Sunny Agents services via WebSocket for real-time messaging. When you send a message, the SDK establishes a WebSocket connection (if not already connected), sends your message, and streams the response back in real-time. For authenticated sessions, the SDK handles token exchange automatically.
 
 <Accordion title="Architecture diagram">
 ```mermaid
 graph TD
-    A[Customer browses plants] --> B[Plant Management]
-    B --> C[Adds to cart]
-    C --> D[Creates order]
-
-    D --> E[Order Processing]
-    E --> F{Payment successful?}
-
-    F -->|Yes| G[Inventory Tracking]
-    F -->|No| H[Cancel & notify]
-
-    G --> I[Reserve stock]
-    I --> J[Fulfill order]
-    J --> K[Update inventory]
-
-    K --> L[Customer Management]
-    L --> M[Send notifications]
-    L --> N[Update order history]
-
-    H --> L
+    A[Your Application] --> B[Sunny Agents SDK]
+    B --> C{Authenticated?}
+    
+    C -->|Yes| D[Token Exchange]
+    C -->|No| E[Anonymous Mode]
+    
+    D --> F[Get Access Token]
+    F --> G[Authorize WebSocket]
+    E --> G
+    
+    G --> H[WebSocket Connection]
+    H --> I[Send Message]
+    I --> J[Stream Response]
+    
+    J --> K[Update UI]
+    K --> L[Handle Events]
+    
+    M[Fetch Artifact] --> N[REST API]
+    N --> O[Return Artifact]
+    O --> P[Render in UI]
 ```
 </Accordion>
 
-## Rate limits
+## Two integration approaches
 
-The Plant Store API has the following rate limits to ensure reliable service:
+### Headless Client
 
-| Plan | Requests per minute | Burst limit |
-|------|-------------------|-------------|
-| Free | 60 | 100 |
-| Pro | 600 | 1000 |
-| Enterprise | Custom | Custom |
+Build a completely custom UI with full control:
 
-If you exceed your rate limit, you'll receive a `429 Too Many Requests` response. Implement exponential backoff to handle rate limit errors gracefully.
+```typescript
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
-## SDKs and libraries
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+});
 
-Official SDKs are available for popular languages. Each SDK handles authentication, error handling, and request formatting automatically, making integration faster and more reliable than using the raw REST API.
+// Listen to events
+client.on("snapshot", (snapshot) => {
+  // Update your UI
+});
 
-<Tabs>
-  <Tab title="Python">
-    ```bash
-    pip install plantstore-sdk
-    ```
-  </Tab>
-  <Tab title="TypeScript">
-    ```bash
-    npm install @plantstore/sdk
-    ```
-  </Tab>
-  <Tab title="Go">
-    ```bash
-    go get github.com/plantstore/plantstore-go
-    ```
-  </Tab>
-</Tabs>
+// Send messages
+await client.sendMessage("I need to find a primary care doctor");
+```
+
+### Vanilla Widget
+
+Drop-in chat widget for quick integration:
+
+```typescript
+import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+attachSunnyChat({
+  container: document.getElementById("chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+});
+```
+
+## Framework compatibility
+
+The SDK is framework-agnostic and works with:
+
+- **React** - Use the headless client with hooks
+- **Vue** - Integrate with Vue's reactivity system
+- **Angular** - Use with Angular services and components
+- **Vanilla JavaScript** - Use directly or with the widget
+- **Any framework** - The headless client works everywhere
+
+## Authentication modes
+
+### Authenticated Mode
+
+For production applications requiring user authentication:
+
+```typescript
+const client = new SunnyAgentsClient({
+  idTokenProvider: async () => {
+    // Return ID token from your auth provider
+    return localStorage.getItem("id_token");
+  },
+  tokenExchange: {
+    partnerName: "your-partner-name",
+    audience: "https://api.sunnyhealthai-staging.com",
+    clientId: "your-client-id",
+  },
+});
+```
+
+### Anonymous Mode
+
+For local-only conversations without server persistence:
+
+```typescript
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  createServerConversations: false,
+});
+```
+
+## Key features
+
+- **Real-time streaming** - Messages stream in real-time as they're generated
+- **Type-safe** - Full TypeScript support with comprehensive type definitions
+- **Event-driven** - Subscribe to events for snapshot updates, streaming deltas, and more
+- **Artifact support** - Fetch and render rich content objects
+- **MCP approvals** - Handle tool execution approvals interactively
+- **File attachments** - Send files as base64-encoded attachments
+- **Automatic reconnection** - WebSocket connections automatically reconnect on failure
+- **Token management** - Automatic token refresh and caching
+
+## Installation
+
+```bash
+npm install @sunnyhealthai/agents-sdk
+# or
+pnpm add @sunnyhealthai/agents-sdk
+# or
+yarn add @sunnyhealthai/agents-sdk
+```
 
 ## Getting help
 
 <CardGroup cols={2}>
   <Card title="Quickstart guide" icon="duotone rocket" href="/quickstart">
-    Make your first API request in minutes
+    Get up and running in minutes
   </Card>
   <Card title="API reference" icon="duotone code" href="/api-reference">
-    Complete endpoint documentation
+    Complete SDK documentation
   </Card>
-  <Card title="Tutorials" icon="duotone book-sparkles" href="/searching-plants">
+  <Card title="Tutorials" icon="duotone book-sparkles" href="/widget-setup">
     Step-by-step integration guides
   </Card>
-  <Card title="Support" icon="duotone headset" href="https://support.plantstore.com">
-    Contact our team for help
+  <Card title="Concepts" icon="duotone lightbulb" href="/concepts">
+    Learn core concepts and patterns
   </Card>
 </CardGroup>
 

@@ -1,0 +1,326 @@
+---
+title: Getting Started with the Widget
+subtitle: Integrate the chat widget into your application
+slug: widget-setup
+---
+
+The vanilla chat widget is the fastest way to add a healthcare concierge chat experience to your application. This tutorial walks you through setting it up, customizing it, and configuring it for healthcare use cases like provider search and appointment booking.
+
+## Basic setup
+
+### Step 1: Install the SDK
+
+```bash
+npm install @sunnyhealthai/agents-sdk
+```
+
+### Step 2: Add the widget
+
+Create an HTML file and add a container:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Healthcare Concierge</title>
+</head>
+<body>
+  <h1>Find Care</h1>
+  
+  <!-- Container for the chat widget -->
+  <div id="sunny-chat"></div>
+  
+  <script type="module">
+    import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+    
+    attachSunnyChat({
+      container: document.getElementById("sunny-chat"),
+      config: {
+        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+      },
+    });
+  </script>
+</body>
+</html>
+```
+
+That's it! The widget is now integrated and ready to use.
+
+## Configuration options
+
+### Basic configuration
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+});
+```
+
+### Custom header title
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+  headerTitle: "Sunny Health Concierge",
+});
+```
+
+### Custom placeholder
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+  placeholder: "How can I help you find care?",
+});
+```
+
+### Anonymous mode
+
+For local-only conversations:
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+  anonymous: true,
+});
+```
+
+### Authenticated mode
+
+For production with user authentication:
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+    idTokenProvider: async () => {
+      return localStorage.getItem("id_token");
+    },
+    tokenExchange: {
+      partnerName: "your-partner-name",
+      audience: "https://api.sunnyhealthai-staging.com",
+      clientId: "your-client-id",
+    },
+  },
+});
+```
+
+## Customization
+
+### Theme colors
+
+Customize the widget's appearance:
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+  colors: {
+    primary: "#006fff",    // User messages, send button
+    secondary: "#212124",    // Text color
+    accent: "#22c55e",       // Success states
+  },
+});
+```
+
+### Conversation storage
+
+Customize how conversations are persisted:
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+  conversationStorageKey: "my_app_conversation_id",
+});
+```
+
+## Using the client instance
+
+The widget returns a client instance that you can use:
+
+```typescript
+const { client, destroy } = attachSunnyChat({
+  container: document.getElementById("sunny-chat"),
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+});
+
+// Listen to events
+client.on("snapshot", (snapshot) => {
+  console.log("State updated:", snapshot);
+});
+
+// Send messages programmatically
+await client.sendMessage("I need to find a primary care doctor");
+
+// Clean up when done
+// destroy();
+```
+
+## Integration examples
+
+### React
+
+```tsx
+import { useEffect, useRef } from "react";
+import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+export function ChatWidget() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const instanceRef = useRef<ReturnType<typeof attachSunnyChat> | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    instanceRef.current = attachSunnyChat({
+      container: containerRef.current,
+      config: {
+        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+      },
+    });
+
+    return () => {
+      instanceRef.current?.destroy();
+    };
+  }, []);
+
+  return <div ref={containerRef} />;
+}
+```
+
+### Vue
+
+```vue
+<template>
+  <div ref="chatContainer"></div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chatContainer = ref<HTMLDivElement | null>(null);
+let chatInstance: ReturnType<typeof attachSunnyChat> | null = null;
+
+onMounted(() => {
+  if (chatContainer.value) {
+    chatInstance = attachSunnyChat({
+      container: chatContainer.value,
+      config: {
+        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+      },
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  chatInstance?.destroy();
+});
+</script>
+```
+
+### Vanilla JavaScript
+
+```javascript
+// app.js
+import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const container = document.getElementById("sunny-chat");
+
+const { client, destroy } = attachSunnyChat({
+  container,
+  config: {
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  },
+  headerTitle: "Support Chat",
+  placeholder: "How can we help?",
+});
+
+// Use the client
+client.on("snapshot", (snapshot) => {
+  console.log("Chat state:", snapshot);
+});
+```
+
+## Styling
+
+The widget includes its own styles, but you can customize them:
+
+```css
+/* Override widget styles */
+#sunny-chat {
+  /* Your custom styles */
+}
+
+/* Or use CSS custom properties */
+#sunny-chat {
+  --sunny-color-primary: #your-color;
+  --sunny-color-secondary: #your-color;
+  --sunny-color-accent: #your-color;
+}
+```
+
+## Best practices
+
+1. **Container sizing**: Ensure your container has appropriate dimensions
+2. **Cleanup**: Always call `destroy()` when unmounting
+3. **Error handling**: Handle connection errors gracefully
+4. **Accessibility**: The widget includes ARIA labels and keyboard navigation
+5. **Mobile**: The widget is responsive and works on mobile devices
+
+## Troubleshooting
+
+### Widget not appearing
+
+- Check that the container element exists
+- Verify the SDK is imported correctly
+- Check browser console for errors
+
+### Connection issues
+
+- Verify WebSocket URL is correct
+- Check network connectivity
+- Ensure CORS is configured correctly
+
+### Styling issues
+
+- Check for CSS conflicts
+- Verify container dimensions
+- Use browser dev tools to inspect
+
+## Next steps
+
+- **[Custom UI Tutorial](/custom-ui)** - Build a custom chat interface
+- **[Authentication Tutorial](/authentication-tutorial)** - Set up authenticated sessions
+- **[Messaging](/messaging)** - Learn about message handling

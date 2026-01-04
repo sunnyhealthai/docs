@@ -5,7 +5,7 @@ instances:
 ai-search:
   location:
     - docs
-title: Sunny Health AI
+title: Sunny Agents SDK
 layout:
   searchbar-placement: header
   page-width: full
@@ -39,29 +39,39 @@ navigation:
             icon: fa-duotone fa-rocket
       - section: Capabilities
         contents:
-          - page: Plant management
-            path: docs/pages/capabilities/plant-management.mdx
-            icon: fa-duotone fa-seedling
-          - page: Order processing
-            path: docs/pages/capabilities/order-processing.mdx
-            icon: fa-duotone fa-cart-shopping
-          - page: Customer management
-            path: docs/pages/capabilities/customer-management.mdx
-            icon: fa-duotone fa-users
-          - page: Inventory tracking
-            path: docs/pages/capabilities/inventory-tracking.mdx
-            icon: fa-duotone fa-boxes-stacked
+          - page: Messaging
+            path: docs/pages/capabilities/messaging.mdx
+            icon: fa-duotone fa-message
+          - page: Conversations
+            path: docs/pages/capabilities/conversations.mdx
+            icon: fa-duotone fa-comments
+          - page: Authentication
+            path: docs/pages/capabilities/authentication.mdx
+            icon: fa-duotone fa-lock
+          - page: Artifacts
+            path: docs/pages/capabilities/artifacts.mdx
+            icon: fa-duotone fa-box
       - section: Tutorials
         contents:
-          - page: Searching for plants
-            path: docs/pages/tutorials/searching-plants.mdx
-            icon: fa-duotone fa-magnifying-glass
-          - page: Creating your first order
-            path: docs/pages/tutorials/first-order-tutorial.mdx
-            icon: fa-duotone fa-bag-shopping
-          - page: Managing plant inventory
-            path: docs/pages/tutorials/inventory-tutorial.mdx
-            icon: fa-duotone fa-clipboard-list
+          - page: Getting Started with the Widget
+            path: docs/pages/tutorials/widget-setup.mdx
+            icon: fa-duotone fa-window-maximize
+          - page: Building a Custom UI
+            path: docs/pages/tutorials/custom-ui.mdx
+            icon: fa-duotone fa-code
+          - page: Implementing Authentication
+            path: docs/pages/tutorials/authentication.mdx
+            icon: fa-duotone fa-key
+      - section: Concepts
+        contents:
+          - page: Key Concepts
+            path: docs/pages/concepts.mdx
+            icon: fa-duotone fa-lightbulb
+      - section: SDK
+        contents:
+          - page: Installation
+            path: docs/pages/sdks.mdx
+            icon: fa-duotone fa-download
       - section: Changelog
         contents:
           - changelog: docs/changelog
@@ -70,18 +80,15 @@ navigation:
       - api: API Reference
 navbar-links:
   - type: minimal
-    text: Fork this repo
-    url: https://github.com/fern-api/docs-starter
+    text: GitHub
+    url: https://github.com/sunnyhealthai/agents-sdk
   - type: filled
-    text: Get a demo
-    url: >-
-      https://buildwithfern.com/contact?utm_campaign=demo&utm_medium=plantstore&utm_source=navbar
-  - type: github
-    value: https://github.com/fern-api/fern
+    text: Get Support
+    url: mailto:support@sunnyhealthai.com
 colors:
   accentPrimary:
-    dark: '#243662'
-    light: '#243662'
+    dark: '#006fff'
+    light: '#006fff'
 theme:
   page-actions: toolbar
   footer-nav: minimal

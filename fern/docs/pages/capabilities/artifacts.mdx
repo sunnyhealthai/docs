@@ -1,0 +1,299 @@
+---
+title: Artifacts
+subtitle: Fetch and render rich content objects
+slug: artifacts
+---
+
+Artifacts are rich content objects referenced in chat messages. Learn how to fetch, cache, and render artifacts like doctor profiles and custom data structures.
+
+## What are artifacts?
+
+Artifacts are structured data objects that provide additional context or information beyond plain text messages. Common examples include:
+
+- **Doctor profiles**: Healthcare provider information with NPI, specialty, ratings, etc.
+- **Structured data**: Custom data objects specific to your use case
+- **Rich content**: Any JSON-serializable object
+
+## Fetching artifacts
+
+Fetch an artifact by its ID:
+
+```typescript
+const artifact = await client.getArtifact<DoctorProfileArtifact>("artifact-id");
+
+if (artifact) {
+  console.log("Artifact type:", artifact.item_type);
+  console.log("Content:", artifact.item_content);
+}
+```
+
+### Type-safe fetching
+
+Use TypeScript generics for type safety:
+
+```typescript
+interface DoctorProfileArtifact {
+  npi: string;
+  first_name?: string;
+  last_name?: string;
+  specialty?: string;
+  rating?: number;
+  // ... other fields
+}
+
+const artifact = await client.getArtifact<DoctorProfileArtifact>("artifact-id");
+
+if (artifact) {
+  const profile = artifact.item_content;
+  console.log("Doctor:", profile.first_name, profile.last_name);
+  console.log("Specialty:", profile.specialty);
+}
+```
+
+## Artifact structure
+
+```typescript
+interface ChatArtifact<T = unknown> {
+  id: string; // Artifact ID
+  item_type: string; // Type identifier (e.g., "doctor_profile")
+  item_content: T; // Typed content
+  content?: T; // Alternative content field (backward compatibility)
+}
+```
+
+## Artifact caching
+
+Artifacts are automatically cached:
+
+```typescript
+// First call - fetches from API
+const artifact1 = await client.getArtifact("artifact-id");
+
+// Second call - returns cached result (no API call)
+const artifact2 = await client.getArtifact("artifact-id");
+```
+
+**Benefits:**
+- Faster subsequent access
+- Reduced API calls
+- Better performance
+
+## Doctor profile artifacts
+
+Doctor profiles are a common artifact type:
+
+```typescript
+interface DoctorProfileArtifact {
+  npi: string; // National Provider Identifier
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  specialty?: string;
+  languages_spoken?: string[];
+  gender?: string;
+  rating?: number;
+  review_count?: number;
+  last_updated_at?: string;
+  locations?: unknown;
+  rank_score?: number;
+  mrf_rates?: Array<Record<string, unknown>>;
+  out_of_pocket_costs?: Array<{
+    procedure_code: string;
+    procedure_code_type?: string;
+    procedure_name?: string;
+    rate?: number;
+    out_of_pocket: number;
+  }>;
+}
+```
+
+### Fetching doctor profiles
+
+```typescript
+const artifact = await client.getArtifact<DoctorProfileArtifact>("doctor-artifact-id");
+
+if (artifact && artifact.item_type === "doctor_profile") {
+  const profile = artifact.item_content;
+  
+  console.log("Name:", `${profile.first_name} ${profile.last_name}`);
+  console.log("Specialty:", profile.specialty);
+  console.log("Rating:", profile.rating);
+  console.log("NPI:", profile.npi);
+}
+```
+
+## Rendering artifacts in UI
+
+### Vanilla widget
+
+The vanilla widget automatically renders doctor profiles:
+
+```typescript
+attachSunnyChat({
+  container: document.getElementById("chat"),
+  // ... config
+});
+
+// Doctor profiles are automatically rendered when referenced in messages
+```
+
+### Custom UI
+
+Render artifacts in your custom UI:
+
+```typescript
+// In your message rendering logic
+message.outputItems?.forEach((item) => {
+  if (item.type === "artifact" && item.id) {
+    // Fetch and render artifact
+    renderArtifact(item.id);
+  }
+});
+
+async function renderArtifact(artifactId: string) {
+  const artifact = await client.getArtifact(artifactId);
+  
+  if (artifact) {
+    if (artifact.item_type === "doctor_profile") {
+      renderDoctorProfile(artifact.item_content);
+    } else {
+      renderGenericArtifact(artifact);
+    }
+  }
+}
+```
+
+## Artifact references in messages
+
+Artifacts are referenced in messages using special tags:
+
+```typescript
+// Message text may contain artifact references
+// Example: "Here's a doctor profile: {art_tag}artifact-id{/art_tag}"
+
+// Parse artifact references
+function parseArtifactReferences(text: string): string[] {
+  const matches = text.match(/{art_tag}([^{]+){\/art_tag}/g);
+  return matches?.map(m => m.replace(/{art_tag}|{\/art_tag}/g, "")) || [];
+}
+```
+
+## Error handling
+
+### Missing artifacts
+
+```typescript
+const artifact = await client.getArtifact("artifact-id");
+
+if (!artifact) {
+  console.error("Artifact not found");
+  // Show error message to user
+}
+```
+
+### Authentication errors
+
+Artifact fetching requires authentication:
+
+```typescript
+try {
+  const artifact = await client.getArtifact("artifact-id");
+} catch (error) {
+  if (error.message.includes("token") || error.message.includes("auth")) {
+    console.error("Authentication required for artifacts");
+    // Redirect to login or show error
+  }
+}
+```
+
+### Network errors
+
+```typescript
+try {
+  const artifact = await client.getArtifact("artifact-id");
+} catch (error) {
+  console.error("Failed to fetch artifact:", error);
+  // Retry or show error message
+}
+```
+
+## Best practices
+
+1. **Type safety**: Use TypeScript generics for type-safe artifact access
+2. **Error handling**: Always handle missing or failed artifact fetches
+3. **Caching**: Rely on SDK caching, don't implement your own
+4. **Loading states**: Show loading indicators while fetching artifacts
+5. **Fallback UI**: Provide fallback UI for failed artifact fetches
+
+## Examples
+
+### Fetch and display doctor profile
+
+```typescript
+async function displayDoctorProfile(artifactId: string) {
+  const artifact = await client.getArtifact<DoctorProfileArtifact>(artifactId);
+  
+  if (!artifact) {
+    return <div>Profile not available</div>;
+  }
+  
+  const profile = artifact.item_content;
+  
+  return (
+    <div className="doctor-profile">
+      <h3>{profile.first_name} {profile.last_name}</h3>
+      <p>Specialty: {profile.specialty}</p>
+      {profile.rating && (
+        <p>Rating: {profile.rating} ({profile.review_count} reviews)</p>
+      )}
+      <p>NPI: {profile.npi}</p>
+    </div>
+  );
+}
+```
+
+### Handle artifact in message
+
+```typescript
+function renderMessage(message: SunnyAgentMessage) {
+  // Check for artifact references in text
+  const artifactIds = parseArtifactReferences(message.text);
+  
+  return (
+    <div>
+      <p>{message.text}</p>
+      {artifactIds.map(id => (
+        <ArtifactRenderer key={id} artifactId={id} />
+      ))}
+    </div>
+  );
+}
+```
+
+### React hook for artifacts
+
+```typescript
+function useArtifact<T>(artifactId: string | null) {
+  const [artifact, setArtifact] = useState<ChatArtifact<T> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!artifactId) return;
+
+    setLoading(true);
+    client.getArtifact<T>(artifactId)
+      .then(setArtifact)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [artifactId]);
+
+  return { artifact, loading, error };
+}
+```
+
+## Next steps
+
+- **[Messaging](/messaging)** - Learn about message handling
+- **[Custom UI Tutorial](/custom-ui)** - Build artifact rendering UI
+- **[API Reference](/api-reference)** - Complete artifact type definitions

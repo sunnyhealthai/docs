@@ -1,0 +1,426 @@
+---
+title: Building a Custom UI
+subtitle: Create a custom chat interface with the headless client
+slug: custom-ui
+---
+
+The headless client gives you full control over the healthcare concierge UI. This tutorial shows you how to build custom chat interfaces for provider search, appointment booking, and health information tools with React, Vue, and vanilla JavaScript.
+
+## Getting started
+
+### Install the SDK
+
+```bash
+npm install @sunnyhealthai/agents-sdk
+```
+
+### Create a client instance
+
+```typescript
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+});
+```
+
+## React example
+
+### Basic chat component
+
+```tsx
+import { useState, useEffect } from "react";
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+import type { SunnyAgentsClientSnapshot, SunnyAgentMessage } from "@sunnyhealthai/agents-sdk";
+
+export function ChatComponent() {
+  const [client] = useState(() => new SunnyAgentsClient({
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  }));
+
+  const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
+    () => client.getSnapshot()
+  );
+  const [input, setInput] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = client.on("snapshot", (snap) => {
+      setSnapshot(snap);
+    });
+    return unsubscribe;
+  }, [client]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    await client.sendMessage(input);
+    setInput("");
+  };
+
+  const activeConversation = snapshot.conversations.find(
+    (c) => c.id === snapshot.activeConversationId
+  );
+
+  return (
+    <div className="chat-container">
+      <div className="messages">
+        {activeConversation?.messages.map((msg) => (
+          <MessageBubble key={msg.id} message={msg} />
+        ))}
+      </div>
+      <div className="input-area">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Ask about providers, appointments, or health questions..."
+        />
+        <button onClick={handleSend}>Send</button>
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({ message }: { message: SunnyAgentMessage }) {
+  return (
+    <div className={`message message--${message.role}`}>
+      {message.isStreaming && <span className="streaming-indicator">...</span>}
+      <div className="message-text">{message.text}</div>
+    </div>
+  );
+}
+```
+
+### React hook for chat
+
+```tsx
+import { useState, useEffect, useCallback } from "react";
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
+
+export function useChat() {
+  const [client] = useState(() => new SunnyAgentsClient({
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  }));
+
+  const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
+    () => client.getSnapshot()
+  );
+
+  useEffect(() => {
+    const unsubscribe = client.on("snapshot", setSnapshot);
+    return unsubscribe;
+  }, [client]);
+
+  const sendMessage = useCallback(async (text: string) => {
+    await client.sendMessage(text); // e.g., "Find me a cardiologist"
+  }, [client]);
+
+  const activeConversation = snapshot.conversations.find(
+    (c) => c.id === snapshot.activeConversationId
+  );
+
+  return {
+    messages: activeConversation?.messages || [],
+    sendMessage,
+    isLoading: activeConversation?.messages.some(m => m.isStreaming) || false,
+  };
+}
+
+// Usage
+function MyChat() {
+  const { messages, sendMessage, isLoading } = useChat();
+  const [input, setInput] = useState("");
+
+  return (
+    <div>
+      {messages.map(msg => (
+        <div key={msg.id}>{msg.text}</div>
+      ))}
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyPress={(e) => e.key === "Enter" && sendMessage(input)} // e.g., "I need to book an appointment"
+      />
+      {isLoading && <div>Loading...</div>}
+    </div>
+  );
+}
+```
+
+## Vue example
+
+### Vue 3 Composition API
+
+```vue
+<template>
+  <div class="chat-container">
+    <div class="messages">
+      <MessageBubble
+        v-for="message in messages"
+        :key="message.id"
+        :message="message"
+      />
+    </div>
+    <div class="input-area">
+      <input
+        v-model="input"
+        @keypress.enter="handleSend"
+        placeholder="Type a message..."
+      />
+      <button @click="handleSend">Send</button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+import type { SunnyAgentsClientSnapshot, SunnyAgentMessage } from "@sunnyhealthai/agents-sdk";
+
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+});
+
+const snapshot = ref<SunnyAgentsClientSnapshot>(client.getSnapshot());
+const input = ref("");
+
+const unsubscribe = client.on("snapshot", (snap) => {
+  snapshot.value = snap;
+});
+
+onBeforeUnmount(() => {
+  unsubscribe();
+});
+
+const activeConversation = computed(() => 
+  snapshot.value.conversations.find(
+    (c) => c.id === snapshot.value.activeConversationId
+  )
+);
+
+const messages = computed(() => activeConversation.value?.messages || []);
+
+const handleSend = async () => {
+  if (!input.value.trim()) return;
+  await client.sendMessage(input.value);
+  input.value = "";
+};
+</script>
+```
+
+### Vue component for messages
+
+```vue
+<template>
+  <div :class="['message', `message--${message.role}`]">
+    <div v-if="message.isStreaming" class="streaming-indicator">...</div>
+    <div class="message-text">{{ message.text }}</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { SunnyAgentMessage } from "@sunnyhealthai/agents-sdk";
+
+defineProps<{
+  message: SunnyAgentMessage;
+}>();
+</script>
+```
+
+## Vanilla JavaScript example
+
+```javascript
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+
+class ChatUI {
+  constructor(container) {
+    this.container = container;
+    this.client = new SunnyAgentsClient({
+      websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+      authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+    });
+
+    this.setupUI();
+    this.setupEventListeners();
+  }
+
+  setupUI() {
+    this.container.innerHTML = `
+      <div class="messages"></div>
+      <div class="input-area">
+        <input type="text" placeholder="Type a message..." />
+        <button>Send</button>
+      </div>
+    `;
+
+    this.messagesEl = this.container.querySelector(".messages");
+    this.inputEl = this.container.querySelector("input");
+    this.sendBtn = this.container.querySelector("button");
+  }
+
+  setupEventListeners() {
+    this.client.on("snapshot", (snapshot) => {
+      this.render(snapshot);
+    });
+
+    this.sendBtn.addEventListener("click", () => this.sendMessage());
+    this.inputEl.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") this.sendMessage();
+    });
+  }
+
+  async sendMessage() {
+    const text = this.inputEl.value.trim();
+    if (!text) return;
+
+    await this.client.sendMessage(text);
+    this.inputEl.value = "";
+  }
+
+  render(snapshot) {
+    const activeConversation = snapshot.conversations.find(
+      (c) => c.id === snapshot.activeConversationId
+    );
+
+    if (!activeConversation) return;
+
+    this.messagesEl.innerHTML = activeConversation.messages
+      .map((msg) => this.renderMessage(msg))
+      .join("");
+
+    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+  }
+
+  renderMessage(message) {
+    return `
+      <div class="message message--${message.role}">
+        ${message.isStreaming ? "<span class='streaming'>...</span>" : ""}
+        <div class="message-text">${this.escapeHtml(message.text)}</div>
+      </div>
+    `;
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}
+
+// Usage
+const chatContainer = document.getElementById("chat");
+const chatUI = new ChatUI(chatContainer);
+```
+
+## Handling streaming
+
+### React streaming example
+
+```tsx
+function MessageBubble({ message }: { message: SunnyAgentMessage }) {
+  const [streamingText, setStreamingText] = useState(message.text);
+
+  useEffect(() => {
+    if (message.isStreaming) {
+      // Update text as it streams
+      const unsubscribe = client.on("streamingDelta", ({ messageId, text }) => {
+        if (messageId === message.id) {
+          setStreamingText(text);
+        }
+      });
+      return unsubscribe;
+    } else {
+      setStreamingText(message.text);
+    }
+  }, [message]);
+
+  return (
+    <div className={`message message--${message.role}`}>
+      <div className="message-text">{streamingText}</div>
+      {message.isStreaming && <span className="cursor">▋</span>}
+    </div>
+  );
+}
+```
+
+## Styling
+
+### Basic styles
+
+```css
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.message {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.message--user {
+  background: #006fff;
+  color: white;
+  margin-left: auto;
+  max-width: 80%;
+}
+
+.message--assistant {
+  background: #f0f0f0;
+  color: #333;
+  margin-right: auto;
+  max-width: 80%;
+}
+
+.input-area {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid #ddd;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.input-area button {
+  margin-left: 8px;
+  padding: 8px 16px;
+  background: #006fff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+```
+
+## Best practices
+
+1. **State management**: Use the SDK's snapshot for state, don't duplicate it
+2. **Event handling**: Subscribe to events to keep UI in sync
+3. **Error handling**: Handle connection and message errors gracefully
+4. **Performance**: Use React.memo or Vue's computed for expensive renders
+5. **Accessibility**: Add ARIA labels and keyboard navigation
+
+## Next steps
+
+- **[Messaging](/messaging)** - Learn about message handling
+- **[Conversations](/conversations)** - Manage multiple conversations
+- **[Artifacts](/artifacts)** - Render rich content

@@ -1,182 +1,262 @@
 ---
 title: Quickstart
-subtitle: Get up and running with the Plant Store API in minutes
+subtitle: Get up and running with the Sunny Agents SDK in minutes
 slug: quickstart
 ---
 
-This guide shows you how to make your first API request to the Plant Store API using our SDKs.
+This guide shows you how to integrate the Sunny Agents SDK into your application. Choose between the drop-in widget for quick integration or the headless client for custom UI implementations.
 
-## Making your first API request
+## Quick start with the widget
+
+The fastest way to add chat to your app:
 
 <Steps>
-<Step title="Get your API key">
-
-[Create an API key in your dashboard](https://plantstore.com/settings/api-keys), which you'll use to authenticate your requests.
-
-Store the key securely and pass it to the SDK either as an environment variable via a `.env` file, or directly in your app's configuration.
-
-```bash title=".env"
-PLANT_STORE_API_KEY=your_api_key_here
-```
-
-<Warning>
-Never commit API keys to version control. Use environment variables and rotate keys regularly for security.
-</Warning>
-
-</Step>
-
 <Step title="Install the SDK">
 
-Install the Plant Store SDK for your preferred language:
+Install the Sunny Agents SDK:
 
 <CodeBlocks>
-```bash Python
-pip install plantstore-sdk
-pip install python-dotenv
+```bash npm
+npm install @sunnyhealthai/agents-sdk
 ```
 
-```bash TypeScript
-npm install @plantstore/sdk
-npm install dotenv
+```bash pnpm
+pnpm add @sunnyhealthai/agents-sdk
 ```
 
-```bash Go
-go get github.com/plantstore/plantstore-go
+```bash yarn
+yarn add @sunnyhealthai/agents-sdk
 ```
 </CodeBlocks>
 
 </Step>
 
-<Step title="Make your first request">
+<Step title="Add the widget to your HTML">
 
-Create a new file and add the following code to search for available plants:
+Create an HTML file and add a container for the chat widget:
 
-<CodeBlocks>
-```python Python
-# quickstart.py
-import os
-from dotenv import load_dotenv
-from plantstore import PlantStoreClient
+```html title="index.html"
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sunny Agents Chat</title>
+</head>
+<body>
+  <div id="sunny-chat"></div>
+  <script type="module">
+    import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-load_dotenv()
-
-client = PlantStoreClient(
-    api_key=os.getenv("PLANT_STORE_API_KEY")
-)
-
-# Search for available plants
-plants = client.plants.search(status="available")
-
-print(f"Found {len(plants)} available plants:")
-for plant in plants[:5]:
-    print(f"- {plant.name} (${plant.price})")
+    attachSunnyChat({
+      container: document.getElementById("sunny-chat"),
+      config: {
+        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+      },
+  headerTitle: "Sunny Health Concierge",
+  placeholder: "How can I help you find care?",
+    });
+  </script>
+</body>
+</html>
 ```
-
-```typescript TypeScript
-// quickstart.ts
-import { PlantStoreClient } from '@plantstore/sdk';
-import 'dotenv/config';
-
-const client = new PlantStoreClient({
-  apiKey: process.env.PLANT_STORE_API_KEY
-});
-
-async function searchPlants() {
-  // Search for available plants
-  const plants = await client.plants.search({
-    status: 'available'
-  });
-
-  console.log(`Found ${plants.length} available plants:`);
-  plants.slice(0, 5).forEach(plant => {
-    console.log(`- ${plant.name} ($${plant.price})`);
-  });
-}
-
-searchPlants();
-```
-
-```go Go
-// main.go
-package main
-
-import (
-    "fmt"
-    "log"
-    "os"
-
-    "github.com/joho/godotenv"
-    "github.com/plantstore/plantstore-go"
-)
-
-func main() {
-    godotenv.Load()
-
-    client := plantstore.NewClient(
-        plantstore.WithAPIKey(os.Getenv("PLANT_STORE_API_KEY")),
-    )
-
-    // Search for available plants
-    plants, err := client.Plants.Search(&plantstore.PlantSearchRequest{
-        Status: "available",
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    fmt.Printf("Found %d available plants:\n", len(plants))
-    for i := 0; i < 5 && i < len(plants); i++ {
-        fmt.Printf("- %s ($%.2f)\n", plants[i].Name, plants[i].Price)
-    }
-}
-```
-</CodeBlocks>
 
 </Step>
 
-<Step title="Execute the code">
+<Step title="Test it out">
 
-<CodeBlocks>
-```bash Python
-python quickstart.py
-```
-
-```bash TypeScript
-npx tsx quickstart.ts
-```
-
-```bash Go
-go run main.go
-```
-</CodeBlocks>
-
-You should see a list of available plants from your catalog.
+Open your HTML file in a browser and start chatting! The widget will automatically connect and handle all WebSocket communication.
 
 </Step>
 </Steps>
+
+## Quick start with the headless client
+
+For custom UI implementations, use the headless client:
+
+<Steps>
+<Step title="Install the SDK">
+
+Same as above - install the SDK package.
+
+</Step>
+
+<Step title="Create a client instance">
+
+```typescript title="app.ts"
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+});
+```
+
+</Step>
+
+<Step title="Listen to events and send messages">
+
+```typescript title="app.ts"
+// Listen to state changes
+client.on("snapshot", (snapshot) => {
+  console.log("Current conversations:", snapshot.conversations);
+  console.log("Active conversation:", snapshot.activeConversationId);
+});
+
+// Listen to streaming updates
+client.on("streamingDelta", ({ conversationId, messageId, text }) => {
+  console.log("Streaming response:", text);
+});
+
+// Send a message
+await client.sendMessage("I need to find a cardiologist");
+```
+
+</Step>
+
+<Step title="Render messages in your UI">
+
+```typescript title="app.ts"
+// Get current state
+const snapshot = client.getSnapshot();
+const activeConversation = snapshot.conversations.find(
+  (c) => c.id === snapshot.activeConversationId
+);
+
+if (activeConversation) {
+  activeConversation.messages.forEach((message) => {
+    console.log(`${message.role}: ${message.text}`);
+  });
+}
+```
+
+</Step>
+</Steps>
+
+## Configuration options
+
+### Basic configuration
+
+```typescript
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+});
+```
+
+### Anonymous mode
+
+For local-only conversations without server persistence:
+
+```typescript
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  createServerConversations: false,
+});
+```
+
+### Authenticated mode
+
+For production applications with user authentication:
+
+```typescript
+const client = new SunnyAgentsClient({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  idTokenProvider: async () => {
+    // Return ID token from your auth provider
+    return localStorage.getItem("id_token");
+  },
+  tokenExchange: {
+    partnerName: "your-partner-name",
+    audience: "https://api.sunnyhealthai-staging.com",
+    clientId: "your-client-id",
+  },
+});
+```
+
+## Complete example
+
+Here's a complete example using the headless client with React:
+
+```typescript title="ChatComponent.tsx"
+import { useEffect, useState } from "react";
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
+
+export function ChatComponent() {
+  const [client] = useState(() => new SunnyAgentsClient({
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
+  }));
+  
+  const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
+    () => client.getSnapshot()
+  );
+  const [input, setInput] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = client.on("snapshot", (snap) => {
+      setSnapshot(snap);
+    });
+    return unsubscribe;
+  }, [client]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    await client.sendMessage(input); // e.g., "Find me a primary care doctor"
+    setInput("");
+  };
+
+  const activeConversation = snapshot.conversations.find(
+    (c) => c.id === snapshot.activeConversationId
+  );
+
+  return (
+    <div>
+      <div className="messages">
+        {activeConversation?.messages.map((msg) => (
+          <div key={msg.id} className={`message message--${msg.role}`}>
+            {msg.text}
+          </div>
+        ))}
+      </div>
+      <div className="input-area">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Ask about providers, appointments, or health questions..."
+        />
+        <button onClick={handleSend}>Send</button>
+      </div>
+    </div>
+  );
+}
+```
 
 ## Next steps
 
 <CardGroup cols={3}>
   <Card
-    title="Searching for plants"
-    icon="duotone magnifying-glass"
-    href="/searching-plants"
+    title="Widget Setup"
+    icon="duotone window-maximize"
+    href="/widget-setup"
   >
-    Learn how to search and filter your plant catalog
+    Learn how to customize the chat widget
   </Card>
   <Card
-    title="Creating orders"
-    icon="duotone bag-shopping"
-    href="/first-order-tutorial"
-  >
-    Build a complete order workflow
-  </Card>
-  <Card
-    title="API Reference"
+    title="Custom UI"
     icon="duotone code"
-    href="/api-reference"
+    href="/custom-ui"
   >
-    Explore all available endpoints
+    Build a custom chat interface
+  </Card>
+  <Card
+    title="Authentication"
+    icon="duotone lock"
+    href="/authentication"
+  >
+    Set up authenticated sessions
   </Card>
 </CardGroup>

@@ -1,342 +1,434 @@
 openapi: 3.1.0
 servers:
-  - url: https://api.plantstore.dev/v3
-    description: Demo server
+  - url: https://api.sunnyhealthai-staging.com
+    description: Production API server
+  - url: https://chat.api.sunnyhealthai-staging.com
+    description: Chat WebSocket and authorization server
 info:
   description: |
-    This is a sample Plant Store Server based on the OpenAPI 3.1 specification. It provides a comprehensive set of endpoints for managing plants, orders, and user authentication.
+    The Sunny Agents SDK provides a TypeScript/JavaScript library designed specifically for building healthcare concierge applications. Embed AI-powered chat experiences that help patients find providers, book appointments, get health information, and navigate care—all in real-time.
     
     ### Key Features
-    - **Rich API Documentation**: Includes detailed examples and schema definitions.
-    - **Search Functionality**: Search for plants by tags or status.
-    - **User-Friendly Endpoints**: Login, logout, and retrieve user information.
-    - **Error Handling**: Clear and consistent error responses.
+    - **Headless Client**: Build custom healthcare chat UIs with full control over the interface
+    - **Vanilla Widget**: Drop-in healthcare concierge widget for quick integration
+    - **Real-time Messaging**: WebSocket-based streaming responses for instant care guidance
+    - **Token Exchange**: Secure authentication flow using ID tokens for HIPAA-compliant sessions
+    - **Artifact Support**: Fetch and render rich content like doctor profiles, provider information, and appointment details
+    - **MCP Approvals**: Handle tool execution approvals interactively for secure healthcare operations
+    
+    ### Authentication
+    The SDK supports two modes:
+    - **Authenticated Mode**: Uses token exchange to convert ID tokens to access tokens
+    - **Anonymous Mode**: Local-only conversations without server persistence
     
     ### Developer Notes
-    - Use `api_key` for store endpoints requiring authorization.
-    - OAuth2 flow is available for plant-specific operations.
-    
-  version: 1.0.18
-  title: Swagger Plant Store - OpenAPI 3.1
-  termsOfService: "http://buildwithfern.com/tos/"
+    - WebSocket connections are managed automatically by the SDK
+    - Token exchange is handled transparently when configured
+    - Artifacts (like doctor profiles) are automatically cached for performance
+    - Designed for healthcare use cases: provider search, appointment booking, health information, and benefits navigation
+  version: 1.0.0
+  title: Sunny Agents SDK API
   contact:
-    name: Plant Store API Support
-    url: https://support.plantstore.dev
-    email: support@buildwithfern.com
+    name: Sunny Agents SDK Support
+    email: support@sunnyhealthai.com
   license:
-    name: Apache 2.0
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+    name: MIT
+    url: "https://opensource.org/licenses/MIT"
 tags:
-  - name: plant
-    description: Everything about your Plants
-    externalDocs:
-      description: Plant API Documentation
-      url: https://docs.plantstore.dev/plants
-  - name: store
-    description: Access to Plantstore orders
-    externalDocs:
-      description: Order Management Guide
-      url: https://docs.plantstore.dev/orders
-  - name: user
-    description: Operations about user
-    externalDocs:
-      description: User Management API
-      url: https://docs.plantstore.dev/users
+  - name: chat
+    description: WebSocket-based chat messaging operations
+  - name: conversations
+    description: Conversation management operations
+  - name: artifacts
+    description: Chat artifact fetching and management
+  - name: authentication
+    description: Authentication and token exchange operations
 paths:
-  /plant:
-    post:
-      tags:
-        - plant
-      summary: Add a new plant to the store
-      operationId: addPlant
-      requestBody:
-        description: Details of the plant to add
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Plant"
-            examples:
-              example1:
-                summary: Add a Fern Plant
-                value:
-                  name: "Fern"
-                  category: "Indoor"
-                  tags: ["green", "leafy"]
-                  status: "available"
-      responses:
-        "200":
-          description: Plant successfully added
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlantResponse"
-              examples:
-                exampleResponse:
-                  summary: Successful Plant Addition
-                  value:
-                    id: 101
-                    name: "Fern"
-                    status: "available"
-                    tags: ["green", "leafy"]
-        "405":
-          description: Invalid input
-    put:
-      tags:
-        - plant
-      summary: Update an existing plant
-      operationId: updatePlant
-      requestBody:
-        description: Updated details of the plant
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Plant"
-            examples:
-              example1:
-                summary: Update plant status
-                value:
-                  name: "Fern"
-                  category: "Indoor"
-                  tags: ["green", "leafy"]
-                  status: "sold"
-      responses:
-        "200":
-          description: Plant successfully updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlantResponse"
-              examples:
-                exampleResponse:
-                  summary: Successful Plant Update
-                  value:
-                    id: 101
-                    name: "Fern"
-                    status: "sold"
-                    tags: ["green", "leafy"]
-        "400":
-          description: Invalid ID supplied
-        "404":
-          description: Plant not found
-  /plant/search/status:
+  /authorize:
     get:
       tags:
-        - plant
-      summary: Search plants by status
-      description: Filter plants based on their current status.
-      operationId: searchPlantsByStatus
+        - authentication
+      summary: Authorize WebSocket connection
+      description: |
+        Get authorization credentials for establishing a WebSocket connection.
+        Returns a WebSocket URL and session ID for connecting to the chat service.
+      operationId: authorize
+      security:
+        - BearerAuth: []
       parameters:
-        - name: status
+        - name: session_id
           in: query
-          description: The status of plants to search for.
+          description: Optional existing session ID to reuse
           required: false
           schema:
             type: string
-            enum: [available, pending, sold]
       responses:
         "200":
-          description: List of plants matching the status filter
+          description: Authorization successful
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/PlantResponse"
+                $ref: "#/components/schemas/AuthorizeResponse"
               examples:
                 exampleResponse:
-                  summary: Plants with status available
+                  summary: Successful authorization
                   value:
-                    - id: 101
-                      name: "Fern"
-                      status: "available"
-                      tags: ["green", "leafy"]
-                    - id: 102
-                      name: "Palm"
-                      status: "available"
-                      tags: ["tropical"]
-  /plant/search/tags:
-    get:
-      tags:
-        - plant
-      summary: Search plants by tags
-      description: Filter plants based on associated tags.
-      operationId: searchPlantsByTags
-      parameters:
-        - name: tags
-          in: query
-          description: Tags to filter plants (comma-separated).
-          schema:
-            type: array
-            items:
-              type: string
-      responses:
-        "200":
-          description: List of plants matching the tags filter
+                    websocket_url: "wss://chat.api.sunnyhealthai-staging.com/ws?session_id=abc123"
+                    session_id: "abc123"
+                    expires_at: "2024-01-01T12:00:00Z"
+        "401":
+          description: Unauthorized - Invalid or missing access token
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/PlantResponse"
+                $ref: "#/components/schemas/Error"
+  /oauth/token:
+    post:
+      tags:
+        - authentication
+      summary: Exchange ID token for access token
+      description: |
+        Exchange an ID token for an access token using OAuth 2.0 token exchange.
+        This endpoint is used internally by the SDK when token exchange is configured.
+      operationId: tokenExchange
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - subject_token
+                - subject_token_type
+                - audience
+                - client_id
+              properties:
+                grant_type:
+                  type: string
+                  example: "urn:ietf:params:oauth:grant-type:token-exchange"
+                subject_token:
+                  type: string
+                  description: The ID token to exchange
+                subject_token_type:
+                  type: string
+                  description: Token type identifier (e.g., "urn:sunny-health-external-mock:id-token")
+                audience:
+                  type: string
+                  description: API audience for the access token
+                  example: "https://api.sunnyhealthai-staging.com"
+                client_id:
+                  type: string
+                  description: Auth0 client ID
+      responses:
+        "200":
+          description: Token exchange successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenExchangeResponse"
               examples:
                 exampleResponse:
-                  summary: Plants filtered by tags
+                  summary: Successful token exchange
                   value:
-                    - id: 101
-                      name: "Fern"
-                      status: "available"
-                      tags: ["green", "leafy"]
-                    - id: 103
-                      name: "Cactus"
-                      status: "available"
-                      tags: ["spiky", "desert"]
-  /plant/{plantId}:
+                    access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    token_type: "Bearer"
+                    expires_in: 3600
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/chat-artifacts/{artifactId}:
     get:
       tags:
-        - plant
-      summary: Find plant by ID
-      description: Retrieve a plant's details by its ID.
-      operationId: getPlantById
+        - artifacts
+      summary: Fetch a chat artifact
+      description: |
+        Retrieve a chat artifact by its ID. Artifacts are rich content objects
+        referenced in chat messages, such as doctor profiles or other structured data.
+        Requires authenticated access.
+      operationId: getArtifact
+      security:
+        - BearerAuth: []
       parameters:
-        - name: plantId
+        - name: artifactId
           in: path
-          description: ID of the plant to retrieve
           required: true
+          description: The artifact ID to fetch
           schema:
-            type: integer
+            type: string
+            example: "artifact_abc123"
       responses:
         "200":
-          description: Details of the requested plant
+          description: Artifact retrieved successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PlantResponse"
+                $ref: "#/components/schemas/ChatArtifact"
               examples:
-                exampleResponse:
-                  summary: Plant details
+                doctorProfile:
+                  summary: Doctor profile artifact
                   value:
-                    id: 101
-                    name: "Fern"
-                    status: "available"
-                    tags: ["green", "leafy"]
-  /user/auth/login:
-    get:
-      tags:
-        - user
-      summary: Logs user into the system
-      operationId: loginUser
-      parameters:
-        - name: username
-          in: query
-          description: The username for login
-          schema:
-            type: string
-        - name: password
-          in: query
-          description: The password for login
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Successful login
-          headers:
-            Set-Cookie:
-              description: Session token for user authentication
-              schema:
-                type: string
+                    id: "artifact_abc123"
+                    item_type: "doctor_profile"
+                    item_content:
+                      npi: "1234567890"
+                      first_name: "Jane"
+                      last_name: "Smith"
+                      specialty: "Cardiology"
+                      rating: 4.8
+                      review_count: 150
+        "401":
+          description: Unauthorized - Authentication required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserAuthResponse"
-              examples:
-                exampleResponse:
-                  summary: Successful login response
-                  value:
-                    token: "abc123token"
-                    expiresIn: 3600
-  /user/auth/logout:
-    get:
-      tags:
-        - user
-      summary: Logs out current logged-in user session
-      operationId: logoutUser
-      responses:
-        default:
-          description: Successful logout
-  /user/{username}:
-    get:
-      tags:
-        - user
-      summary: Get user by username
-      description: Retrieve user details using their username.
-      operationId: getUserByName
-      parameters:
-        - name: username
-          in: path
-          description: Username of the user to retrieve
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: User details retrieved successfully
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Artifact not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
-              examples:
-                exampleResponse:
-                  summary: User details response
-                  value:
-                    id: 1
-                    username: "john_doe"
-                    email: "john@example.com"
+                $ref: "#/components/schemas/Error"
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token obtained via token exchange
   schemas:
-    Plant:
+    AuthorizeResponse:
       type: object
+      required:
+        - websocket_url
+        - session_id
+        - expires_at
       properties:
-        name:
+        websocket_url:
           type: string
-        category:
+          format: uri
+          description: WebSocket URL for chat connection
+          example: "wss://chat.api.sunnyhealthai-staging.com/ws?session_id=abc123"
+        session_id:
           type: string
-        tags:
-          type: array
-          items:
-            type: string
-        status:
+          description: Session identifier for the WebSocket connection
+        expires_at:
           type: string
-          enum: [available, pending, sold]
-    PlantResponse:
+          format: date-time
+          description: Session expiration timestamp
+    TokenExchangeResponse:
       type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
       properties:
-        id:
-          type: integer
-        name:
+        access_token:
           type: string
-        status:
+          description: Access token for API authentication
+        token_type:
           type: string
-        tags:
-          type: array
-          items:
-            type: string
-    UserAuthResponse:
-      type: object
-      properties:
-        token:
-          type: string
-          description: Authentication token
-        expiresIn:
+          example: "Bearer"
+        expires_in:
           type: integer
           description: Token expiration time in seconds
-    User:
+          example: 3600
+    ChatArtifact:
       type: object
+      required:
+        - id
+        - item_type
+        - item_content
       properties:
         id:
+          type: string
+          description: Unique artifact identifier
+        item_type:
+          type: string
+          description: Type of artifact (e.g., "doctor_profile")
+          example: "doctor_profile"
+        item_content:
+          type: object
+          description: Artifact content (structure varies by type)
+          additionalProperties: true
+        content:
+          type: object
+          description: Alternative content field (for backward compatibility)
+          additionalProperties: true
+    DoctorProfileArtifact:
+      type: object
+      properties:
+        npi:
+          type: string
+          description: National Provider Identifier
+        first_name:
+          type: string
+        last_name:
+          type: string
+        title:
+          type: string
+        specialty:
+          type: string
+        languages_spoken:
+          type: array
+          items:
+            type: string
+        gender:
+          type: string
+        rating:
+          type: number
+          format: float
+        review_count:
           type: integer
-        username:
+        last_updated_at:
           type: string
-        email:
+          format: date-time
+        locations:
+          type: object
+          additionalProperties: true
+        rank_score:
+          type: number
+          format: float
+        mrf_rates:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        out_of_pocket_costs:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutOfPocketCost"
+    OutOfPocketCost:
+      type: object
+      properties:
+        procedure_code:
           type: string
+        procedure_code_type:
+          type: string
+        procedure_name:
+          type: string
+        rate:
+          type: number
+        out_of_pocket:
+          type: number
+    Conversation:
+      type: object
+      required:
+        - id
+        - messages
+      properties:
+        id:
+          type: string
+          description: Unique conversation identifier
+        title:
+          type: string
+          nullable: true
+          description: Optional conversation title
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        quickResponses:
+          type: array
+          items:
+            type: string
+          description: Suggested quick response options
+    Message:
+      type: object
+      required:
+        - id
+        - role
+        - text
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique message identifier
+        role:
+          type: string
+          enum: [user, assistant, system]
+          description: Message role
+        text:
+          type: string
+          description: Message text content
+        createdAt:
+          type: string
+          format: date-time
+          description: Message creation timestamp
+        isStreaming:
+          type: boolean
+          description: Whether the message is currently streaming
+        outputItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageItem"
+          description: Rich content items in the message
+        feedback:
+          type: boolean
+          nullable: true
+          description: User feedback on the message (true=positive, false=negative)
+    MessageItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Item type (e.g., "message", "mcp_approval_request")
+        id:
+          type: string
+          description: Item identifier
+        name:
+          type: string
+          description: Item name
+        server_label:
+          type: string
+          description: Server-provided label
+        arguments:
+          type: object
+          additionalProperties: true
+          description: Item arguments (structure varies by type)
+        approval_request_id:
+          type: string
+          description: Approval request ID (for MCP approval items)
+        approve:
+          type: boolean
+          description: Approval decision (for MCP approval responses)
+        reason:
+          type: string
+          nullable: true
+          description: Reason for approval/rejection
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageContentFragment"
+          description: Content fragments
+    MessageContentFragment:
+      type: object
+      properties:
+        type:
+          type: string
+        text:
+          type: string
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
