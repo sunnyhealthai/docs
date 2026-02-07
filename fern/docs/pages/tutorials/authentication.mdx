@@ -42,8 +42,9 @@ const chat = await createSunnyChat({
 
 Authentication happens automatically when you create the chat instance. The SDK will:
 1. Trigger SAML/OIDC login (popup or redirect)
-2. Exchange tokens automatically
-3. Connect to the chat service
+2. Connect directly to the WebSocket URL
+3. Send `auth.upgrade` message with ID token
+4. Receive `auth.upgraded` response to complete authentication
 
 ## Custom Token Exchange Setup
 
@@ -76,7 +77,6 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   idTokenProvider: async () => {
     // Return ID token from your auth provider
     return localStorage.getItem("id_token");
@@ -120,7 +120,6 @@ export function AuthenticatedChat() {
 
     const clientInstance = new SunnyAgentsClient({
       websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
       idTokenProvider: async () => {
         const claims = await getIdTokenClaims();
         return claims?.__raw || null;
@@ -176,7 +175,6 @@ const idToken = token.__raw;
 // Create SDK client
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   idTokenProvider: async () => {
     const claims = await auth0.getIdTokenClaims();
     return claims?.__raw || null;
@@ -216,7 +214,6 @@ export function FirebaseChat() {
 
     const clientInstance = new SunnyAgentsClient({
       websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
       idTokenProvider: async () => {
         if (!user) return null;
         return await user.getIdToken();
@@ -275,7 +272,6 @@ async function getIdToken(): Promise<string | null> {
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   idTokenProvider: getIdToken,
   tokenExchange: {
     partnerName: "your-partner-name",
@@ -372,7 +368,6 @@ export function AuthenticatedChat() {
     const initClient = async () => {
       const client = new SunnyAgentsClient({
         websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
         idTokenProvider: async () => {
           const claims = await getIdTokenClaims();
           return claims?.__raw || null;

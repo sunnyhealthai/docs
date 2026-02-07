@@ -73,7 +73,6 @@ attachSunnyChat({
   container: document.getElementById("chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
 });
 ```
@@ -87,7 +86,6 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
 });
 
 await client.sendMessage("I need to find a cardiologist near me");

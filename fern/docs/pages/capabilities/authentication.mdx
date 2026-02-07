@@ -87,7 +87,6 @@ For local-only conversations without authentication:
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   createServerConversations: false,
 });
 ```
@@ -115,9 +114,9 @@ sequenceDiagram
     App->>SDK: createSunnyChat with SAML config
     SDK->>Auth0: Trigger SAML/OIDC login (popup/redirect)
     Auth0-->>SDK: ID token
-    SDK->>ChatAPI: Authorize with ID token
-    ChatAPI-->>SDK: WebSocket URL + session ID
-    SDK->>ChatAPI: Connect WebSocket
+    SDK->>ChatAPI: Connect WebSocket directly
+    SDK->>ChatAPI: Send auth.upgrade with ID token
+    ChatAPI-->>SDK: auth.upgraded response
 ```
 
 ### Token Exchange Flow
@@ -133,13 +132,13 @@ sequenceDiagram
     participant ChatAPI
 
     App->>SDK: Create client with idTokenProvider
+    SDK->>ChatAPI: Connect WebSocket directly
     SDK->>AuthProvider: Get ID token
     AuthProvider-->>SDK: ID token
     SDK->>TokenExchange: Exchange ID token for access token
     TokenExchange-->>SDK: Access token
-    SDK->>ChatAPI: Authorize with access token
-    ChatAPI-->>SDK: WebSocket URL + session ID
-    SDK->>ChatAPI: Connect WebSocket
+    SDK->>ChatAPI: Send auth.upgrade with access token
+    ChatAPI-->>SDK: auth.upgraded response
 ```
 
 ### Step-by-step
@@ -148,14 +147,17 @@ sequenceDiagram
 1. **Configure Auth0**: Set up SAML/OIDC connection in Auth0
 2. **Create chat**: Call `createSunnyChat` with SAML/OIDC config
 3. **Auto-login**: SDK automatically triggers authentication
-4. **Connect**: SDK establishes WebSocket connection
+4. **Connect**: SDK connects directly to WebSocket URL
+5. **Upgrade auth**: SDK sends `auth.upgrade` message with ID token
+6. **Authenticated**: SDK receives `auth.upgraded` response
 
 **Token Exchange:**
-1. **Provide ID token**: Your app provides an ID token via `idTokenProvider`
-2. **Exchange token**: SDK exchanges ID token for access token
-3. **Authorize**: SDK uses access token to authorize WebSocket connection
-4. **Connect**: SDK establishes WebSocket connection
-5. **Refresh**: SDK automatically refreshes token when expired
+1. **Connect**: SDK connects directly to WebSocket URL
+2. **Provide ID token**: Your app provides an ID token via `idTokenProvider`
+3. **Exchange token**: SDK exchanges ID token for access token
+4. **Upgrade auth**: SDK sends `auth.upgrade` message with access token
+5. **Authenticated**: SDK receives `auth.upgraded` response
+6. **Refresh**: SDK automatically refreshes token when expired
 
 ## Authentication providers
 
@@ -429,7 +431,6 @@ For applications that don't require authentication:
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   createServerConversations: false, // Explicitly disable server persistence
 });
 ```
@@ -441,7 +442,6 @@ attachSunnyChat({
   container: document.getElementById("chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   anonymous: true, // Enable anonymous mode
 });
@@ -558,7 +558,6 @@ const client = new SunnyAgentsClient({
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   createServerConversations: false,
 });
 ```

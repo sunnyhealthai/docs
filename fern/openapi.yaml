@@ -3,7 +3,7 @@ servers:
   - url: https://api.sunnyhealthai-staging.com
     description: Production API server
   - url: https://chat.api.sunnyhealthai-staging.com
-    description: Chat WebSocket and authorization server
+    description: Chat WebSocket server
 info:
   description: |
     The Sunny Agents SDK provides a TypeScript/JavaScript library designed specifically for building healthcare concierge applications. Embed AI-powered chat experiences that help patients find providers, book appointments, get health information, and navigate care—all in real-time.
@@ -22,7 +22,8 @@ info:
     - **Anonymous Mode**: Local-only conversations without server persistence
     
     ### Developer Notes
-    - WebSocket connections are managed automatically by the SDK
+    - WebSocket connections are made directly to the WebSocket URL
+    - Authentication happens via `auth.upgrade` messages over the WebSocket connection
     - Token exchange is handled transparently when configured
     - Artifacts (like doctor profiles) are automatically cached for performance
     - Designed for healthcare use cases: provider search, appointment booking, health information, and benefits navigation
@@ -44,44 +45,6 @@ tags:
   - name: authentication
     description: Authentication and token exchange operations
 paths:
-  /authorize:
-    get:
-      tags:
-        - authentication
-      summary: Authorize WebSocket connection
-      description: |
-        Get authorization credentials for establishing a WebSocket connection.
-        Returns a WebSocket URL and session ID for connecting to the chat service.
-      operationId: authorize
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: session_id
-          in: query
-          description: Optional existing session ID to reuse
-          required: false
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Authorization successful
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthorizeResponse"
-              examples:
-                exampleResponse:
-                  summary: Successful authorization
-                  value:
-                    websocket_url: "wss://chat.api.sunnyhealthai-staging.com/ws?session_id=abc123"
-                    session_id: "abc123"
-                    expires_at: "2024-01-01T12:00:00Z"
-        "401":
-          description: Unauthorized - Invalid or missing access token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
   /oauth/token:
     post:
       tags:
@@ -206,25 +169,6 @@ components:
       bearerFormat: JWT
       description: Access token obtained via token exchange
   schemas:
-    AuthorizeResponse:
-      type: object
-      required:
-        - websocket_url
-        - session_id
-        - expires_at
-      properties:
-        websocket_url:
-          type: string
-          format: uri
-          description: WebSocket URL for chat connection
-          example: "wss://chat.api.sunnyhealthai-staging.com/ws?session_id=abc123"
-        session_id:
-          type: string
-          description: Session identifier for the WebSocket connection
-        expires_at:
-          type: string
-          format: date-time
-          description: Session expiration timestamp
     TokenExchangeResponse:
       type: object
       required:

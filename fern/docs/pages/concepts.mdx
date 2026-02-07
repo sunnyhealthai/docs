@@ -103,7 +103,6 @@ No authentication required. Conversations are local-only:
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   createServerConversations: false,
 });
 ```
@@ -112,8 +111,8 @@ const client = new SunnyAgentsClient({
 
 The SDK manages WebSocket connections automatically:
 
-1. **Authorization**: Get WebSocket URL and session ID
-2. **Connection**: Establish WebSocket connection
+1. **Connection**: Establish WebSocket connection directly to the WebSocket URL
+2. **Authentication**: If authenticated, send `auth.upgrade` message with access token
 3. **Messaging**: Send/receive messages
 4. **Reconnection**: Automatically reconnect on failure
 5. **Cleanup**: Close connection when client is destroyed

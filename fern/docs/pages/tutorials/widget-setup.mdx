@@ -39,7 +39,6 @@ Create an HTML file and add a container:
       container: document.getElementById("sunny-chat"),
       config: {
         websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
       },
     });
   </script>
@@ -91,7 +90,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
 });
 ```
@@ -103,7 +101,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   headerTitle: "Sunny Health Concierge",
 });
@@ -116,7 +113,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   placeholder: "How can I help you find care?",
 });
@@ -131,7 +127,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   anonymous: true,
 });
@@ -184,7 +179,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
     idTokenProvider: async () => {
       return localStorage.getItem("id_token");
     },
@@ -208,7 +202,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   colors: {
     primary: "#006fff",    // User messages, send button
@@ -227,7 +220,6 @@ attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   conversationStorageKey: "my_app_conversation_id",
 });
@@ -242,7 +234,6 @@ const { client, destroy } = attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
 });
 
@@ -277,7 +268,6 @@ export function ChatWidget() {
       container: containerRef.current,
       config: {
         websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
       },
     });
 
@@ -310,7 +300,6 @@ onMounted(() => {
       container: chatContainer.value,
       config: {
         websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
       },
     });
   }
@@ -334,7 +323,6 @@ const { client, destroy } = attachSunnyChat({
   container,
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
   headerTitle: "Support Chat",
   placeholder: "How can we help?",

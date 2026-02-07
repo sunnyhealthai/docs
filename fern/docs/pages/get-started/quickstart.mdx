@@ -50,7 +50,6 @@ Create an HTML file and add a container for the chat widget:
       container: document.getElementById("sunny-chat"),
       config: {
         websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-        authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
       },
       headerTitle: "Sunny Health Concierge",
       placeholder: "How can I help you find care?",
@@ -118,7 +117,6 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
 });
 ```
 
@@ -170,7 +168,6 @@ if (activeConversation) {
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
 });
 ```
 
@@ -181,7 +178,6 @@ For local-only conversations without server persistence:
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   createServerConversations: false,
 });
 ```
@@ -232,7 +228,6 @@ const chat = await createSunnyChat({
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   idTokenProvider: async () => {
     // Return ID token from your auth provider
     return localStorage.getItem("id_token");
@@ -257,7 +252,6 @@ import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
 export function ChatComponent() {
   const [client] = useState(() => new SunnyAgentsClient({
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   }));
   
   const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(

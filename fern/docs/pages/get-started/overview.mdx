@@ -58,19 +58,22 @@ graph TD
     C -->|No| E[Anonymous Mode]
     
     D --> F[Get Access Token]
-    F --> G[Authorize WebSocket]
-    E --> G
+    F --> H[WebSocket Connection]
+    E --> H
     
-    G --> H[WebSocket Connection]
-    H --> I[Send Message]
-    I --> J[Stream Response]
+    H --> I{Authenticated?}
+    I -->|Yes| J[Send auth.upgrade]
+    I -->|No| K[Send Message]
+    J --> L[Receive auth.upgraded]
+    L --> K
     
-    J --> K[Update UI]
-    K --> L[Handle Events]
+    K --> M[Stream Response]
+    M --> N[Update UI]
+    N --> O[Handle Events]
     
-    M[Fetch Artifact] --> N[REST API]
-    N --> O[Return Artifact]
-    O --> P[Render in UI]
+    P[Fetch Artifact] --> Q[REST API]
+    Q --> R[Return Artifact]
+    R --> S[Render in UI]
 ```
 </Accordion>
 
@@ -105,7 +108,6 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
 });
 
 // Listen to events
@@ -128,7 +130,6 @@ attachSunnyChat({
   container: document.getElementById("chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   },
 });
 ```
@@ -214,7 +215,6 @@ For local-only conversations without server persistence:
 ```typescript
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   createServerConversations: false,
 });
 ```

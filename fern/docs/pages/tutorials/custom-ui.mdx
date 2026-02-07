@@ -21,7 +21,6 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
 });
 ```
 
@@ -37,7 +36,6 @@ import type { SunnyAgentsClientSnapshot, SunnyAgentMessage } from "@sunnyhealtha
 export function ChatComponent() {
   const [client] = useState(() => new SunnyAgentsClient({
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   }));
 
   const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
@@ -102,7 +100,6 @@ import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
 export function useChat() {
   const [client] = useState(() => new SunnyAgentsClient({
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
   }));
 
   const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
@@ -182,7 +179,6 @@ import type { SunnyAgentsClientSnapshot, SunnyAgentMessage } from "@sunnyhealtha
 
 const client = new SunnyAgentsClient({
   websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
 });
 
 const snapshot = ref<SunnyAgentsClientSnapshot>(client.getSnapshot());
@@ -241,7 +237,6 @@ class ChatUI {
     this.container = container;
     this.client = new SunnyAgentsClient({
       websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      authorizeUrl: "https://chat.api.sunnyhealthai-staging.com/authorize",
     });
 
     this.setupUI();
