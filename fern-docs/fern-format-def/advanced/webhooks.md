@@ -1,0 +1,91 @@
+---
+title: Webhooks in the Fern Definition
+description: Learn how to define webhooks in the Fern Definition
+---
+
+In Fern, you can specify webhooks in your API definition. The webhooks will be included 
+in both the generated SDKs and the API documentation.
+
+## Webhook definition
+
+Each webhook defines:
+
+1. **Method**: The HTTP Method that the webhook will use (either `GET` or `POST`)
+2. **Headers**: The headers that the webhook will send
+3. **Payload**: The schema of the webhook payload
+
+<CodeBlock title='webhooks.yml'>
+  ```yaml {2-10}
+  webhooks: 
+    paymentNotification: 
+      display-name: Payment Notification
+      docs: Receive a notification when a payment changes status
+      method: POST 
+      headers: 
+        X-Signature-Primary: 
+          type: string 
+          docs: An HMAC signature of the payload
+      payload: PaymentNotificationPayload
+  
+  types: 
+    PaymentNotificationPayload: 
+      discriminant: notificationType
+      union: 
+        queued: QueuedPaymentNotification
+        processing: ProcessingPaymentNotification
+        completed: CompletedPaymentNotification
+  ```
+</CodeBlock>
+
+### Inlined payloads
+
+You can inline the schema of the payload by doing the following: 
+
+<CodeBlock title='webhooks.yml'>
+  ```yaml
+  webhooks: 
+    paymentNotification: 
+      display-name: Payment Notification
+      docs: Receive a notification when a payment changes status
+      method: POST 
+      headers: 
+        X-Signature-Primary: 
+          type: string 
+          docs: An HMAC signature of the payload
+      payload:
+        name: PaymentNotificationPayload
+        properties: 
+          id:
+            type: string
+            docs: The notification id
+          amount: double
+          currency: Currency
+  ```
+</CodeBlock>
+
+## Generate webhook reference
+
+Fern Docs can automatically generate your webhook reference documentation from your definition. Set this up in your `docs.yml` file. 
+
+Your webhook reference can be a single documentation page:
+
+```yml docs.yml
+navigation:
+  - api: Webhook Reference # Display name for this page
+    api-name: webhooks-v1 # Directory containing webhook definition
+```
+
+Or you can configure individual documentation pages per webhook event:
+
+```yaml title="docs.yml"
+navigation:
+  - subpackage_api.newPlantWebhook # Format: subpackage_{name-of-api}.{webhook-event-name}
+```
+
+For more information on how to configure your webhook reference in `docs.yml`, see [Generate your webhook reference](/docs/api-references/generate-webhook-reference).
+
+## SDK verification utilities
+
+Fern automatically generates webhook signature verification utilities in your SDKs based on your webhook definitions. For more information, see [Webhook signature verification](/learn/sdks/deep-dives/sdk-user-features#webhook-signature-verification).
+
+

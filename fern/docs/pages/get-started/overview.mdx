@@ -37,7 +37,7 @@ The SDK is organized around four main capabilities:
     Manage multiple conversations with state persistence. Create, switch between, and manage conversation history. Support both server-persisted and local-only conversations.
   </Card>
   <Card title="Authentication" icon="duotone lock" href="/authentication">
-    Secure token exchange flow for authenticated sessions. Support for ID token providers (Auth0, Firebase, etc.) with automatic token refresh. Anonymous mode for local-only conversations.
+    Multiple authentication methods: SAML/OIDC via Auth0, custom token exchange, passwordless email/SMS, and anonymous mode. Automatic token management and refresh.
   </Card>
   <Card title="Artifacts" icon="duotone box" href="/artifacts">
     Fetch and render rich content objects like doctor profiles, structured data, and custom artifacts. Automatic caching for performance. Type-safe artifact handling.
@@ -74,7 +74,27 @@ graph TD
 ```
 </Accordion>
 
-## Two integration approaches
+## Three integration approaches
+
+### Unified API (Recommended)
+
+Simplest way to get started with automatic authentication handling:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+// SAML/OIDC authentication (auto-login)
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "your-tenant.auth0.com",
+    clientId: "your-client-id",
+    connection: "guardian-saml",
+    audience: "https://api.sunnyhealthai-staging.com",
+  },
+});
+```
 
 ### Headless Client
 
@@ -125,22 +145,66 @@ The SDK is framework-agnostic and works with:
 
 ## Authentication modes
 
-### Authenticated Mode
+The SDK supports multiple authentication methods:
 
-For production applications requiring user authentication:
+### SAML/OIDC Authentication (Recommended for Enterprise)
+
+Automatic authentication via Auth0 with SAML or OIDC:
 
 ```typescript
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => {
-    // Return ID token from your auth provider
-    return localStorage.getItem("id_token");
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "your-tenant.auth0.com",
+    clientId: "your-client-id",
+    connection: "guardian-saml",
+    audience: "https://api.sunnyhealthai-staging.com",
   },
-  tokenExchange: {
+});
+```
+
+### Custom Token Exchange
+
+For applications with custom authentication providers:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "tokenExchange",
+    idTokenProvider: async () => {
+      return localStorage.getItem("id_token");
+    },
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
   },
 });
+```
+
+### Passwordless Authentication
+
+Email or SMS-based authentication without passwords:
+
+```typescript
+import { PasswordlessAuthManager, LLMWebSocketManager } from "@sunnyhealthai/agents-sdk";
+
+const wsManager = new LLMWebSocketManager({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+});
+
+const authManager = new PasswordlessAuthManager({
+  wsManager,
+  tokenExchange: { /* ... */ },
+});
+
+await authManager.start({ email: "user@example.com" });
+await authManager.verify({ email: "user@example.com", code: "123456" });
 ```
 
 ### Anonymous Mode

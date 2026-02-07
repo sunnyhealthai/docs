@@ -27,6 +27,7 @@ yarn add @sunnyhealthai/agents-sdk
 ## Package Information
 
 - **Package Name**: `@sunnyhealthai/agents-sdk`
+- **Current Version**: `0.0.9`
 - **Registry**: [npm](https://www.npmjs.com/package/@sunnyhealthai/agents-sdk)
 - **TypeScript**: Full type definitions included
 - **ESM & CJS**: Supports both ES modules and CommonJS
@@ -50,6 +51,9 @@ The SDK is written in TypeScript and includes comprehensive type definitions. Im
 import {
   SunnyAgentsClient,
   attachSunnyChat,
+  createSunnyChat, // Unified entry point with automatic auth
+  Auth0Provider, // SAML/OIDC authentication
+  PasswordlessAuthManager, // Passwordless email/SMS auth
   type ConversationState,
   type SunnyAgentMessage,
   type SunnyAgentsConfig,
@@ -60,6 +64,12 @@ import {
   type VanillaChatOptions,
   type VanillaChatInstance,
   type VanillaChatColors,
+  type UnifiedSunnyChatOptions,
+  type AuthConfig,
+  type SamlOidcAuthConfig,
+  type TokenExchangeAuthConfig,
+  type Auth0ProviderConfig,
+  type PasswordlessAuthConfig,
 } from "@sunnyhealthai/agents-sdk";
 ```
 
@@ -75,7 +85,29 @@ The SDK is framework-agnostic and works with:
 
 ## Usage
 
+### Unified Entry Point (Recommended)
+
+The `createSunnyChat` function provides the simplest way to set up chat with automatic authentication handling:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+// SAML/OIDC authentication (auto-login)
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "your-tenant.auth0.com",
+    clientId: "your-client-id",
+    connection: "guardian-saml", // Auto-login enabled
+    audience: "https://api.sunnyhealthai-staging.com",
+  },
+});
+```
+
 ### Headless Client
+
+For custom UI implementations:
 
 ```typescript
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
@@ -87,6 +119,8 @@ const client = new SunnyAgentsClient({
 ```
 
 ### Vanilla Widget
+
+For quick integration with a pre-built UI:
 
 ```typescript
 import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";

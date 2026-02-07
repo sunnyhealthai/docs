@@ -4,13 +4,60 @@ subtitle: Secure token exchange and session management
 slug: authentication
 ---
 
-The Sunny Agents SDK supports two authentication modes: authenticated sessions with token exchange, and anonymous mode for local-only conversations.
+The Sunny Agents SDK supports multiple authentication modes: SAML/OIDC via Auth0, custom token exchange, passwordless authentication, and anonymous mode for local-only conversations.
 
 ## Authentication modes
 
-### Authenticated mode
+### SAML/OIDC Authentication (Recommended)
 
-For production applications requiring user authentication:
+For enterprise applications using SAML or OIDC authentication via Auth0:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "your-tenant.auth0.com",
+    clientId: "your-client-id",
+    connection: "guardian-saml", // Auto-login enabled
+    audience: "https://api.sunnyhealthai-staging.com",
+  },
+});
+```
+
+**Features:**
+
+- Automatic authentication via popup or redirect
+- No manual token management
+- Server-persisted conversations
+- Enterprise SSO support
+- Modal overlay option for native feel
+
+### Custom Token Exchange
+
+For applications with custom authentication providers:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "tokenExchange",
+    idTokenProvider: async () => {
+      // Return ID token from your auth provider
+      return localStorage.getItem("id_token");
+    },
+    partnerName: "your-partner-name",
+    audience: "https://api.sunnyhealthai-staging.com",
+    clientId: "your-client-id",
+  },
+});
+```
+
+**Or use the headless client directly:**
 
 ```typescript
 const client = new SunnyAgentsClient({
@@ -52,9 +99,30 @@ const client = new SunnyAgentsClient({
 - Faster setup
 - No user data persistence
 
-## Token exchange flow
+## Authentication flows
 
-The SDK uses OAuth 2.0 token exchange to convert ID tokens into access tokens:
+### SAML/OIDC Flow
+
+For SAML/OIDC authentication via Auth0:
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant SDK
+    participant Auth0
+    participant ChatAPI
+
+    App->>SDK: createSunnyChat with SAML config
+    SDK->>Auth0: Trigger SAML/OIDC login (popup/redirect)
+    Auth0-->>SDK: ID token
+    SDK->>ChatAPI: Authorize with ID token
+    ChatAPI-->>SDK: WebSocket URL + session ID
+    SDK->>ChatAPI: Connect WebSocket
+```
+
+### Token Exchange Flow
+
+For custom token exchange:
 
 ```mermaid
 sequenceDiagram
@@ -76,33 +144,68 @@ sequenceDiagram
 
 ### Step-by-step
 
+**SAML/OIDC:**
+1. **Configure Auth0**: Set up SAML/OIDC connection in Auth0
+2. **Create chat**: Call `createSunnyChat` with SAML/OIDC config
+3. **Auto-login**: SDK automatically triggers authentication
+4. **Connect**: SDK establishes WebSocket connection
+
+**Token Exchange:**
 1. **Provide ID token**: Your app provides an ID token via `idTokenProvider`
 2. **Exchange token**: SDK exchanges ID token for access token
 3. **Authorize**: SDK uses access token to authorize WebSocket connection
 4. **Connect**: SDK establishes WebSocket connection
 5. **Refresh**: SDK automatically refreshes token when expired
 
-## ID token providers
+## Authentication providers
 
-### Auth0
+### Auth0 SAML/OIDC (Recommended)
+
+For enterprise SSO, use the unified API with SAML/OIDC:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "your-tenant.auth0.com",
+    clientId: "your-client-id",
+    connection: "guardian-saml", // SAML connection name
+    audience: "https://api.sunnyhealthai-staging.com",
+    usePopup: true, // Use popup instead of redirect
+    useModal: true, // Use modal overlay for native feel
+  },
+});
+```
+
+### Auth0 with React
+
+For React applications using Auth0 React SDK:
 
 ```typescript
 import { useAuth0 } from "@auth0/auth0-react";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 function MyComponent() {
   const { getIdTokenClaims } = useAuth0();
 
-  const client = new SunnyAgentsClient({
-    idTokenProvider: async () => {
-      const claims = await getIdTokenClaims();
-      return claims?.__raw || null;
-    },
-    tokenExchange: {
-      partnerName: "your-partner-name",
-      audience: "https://api.sunnyhealthai-staging.com",
-      clientId: "your-auth0-client-id",
-    },
-  });
+  useEffect(() => {
+    createSunnyChat({
+      container: document.getElementById("chat"),
+      auth: {
+        type: "tokenExchange",
+        idTokenProvider: async () => {
+          const claims = await getIdTokenClaims();
+          return claims?.__raw || null;
+        },
+        partnerName: "your-partner-name",
+        audience: "https://api.sunnyhealthai-staging.com",
+        clientId: "your-auth0-client-id",
+      },
+    });
+  }, [getIdTokenClaims]);
 }
 ```
 
@@ -110,16 +213,19 @@ function MyComponent() {
 
 ```typescript
 import { getAuth } from "firebase/auth";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 const auth = getAuth();
 
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => {
-    const user = auth.currentUser;
-    if (!user) return null;
-    return await user.getIdToken();
-  },
-  tokenExchange: {
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "tokenExchange",
+    idTokenProvider: async () => {
+      const user = auth.currentUser;
+      if (!user) return null;
+      return await user.getIdToken();
+    },
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
@@ -130,14 +236,18 @@ const client = new SunnyAgentsClient({
 ### Custom provider
 
 ```typescript
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => {
-    // Your custom logic to get ID token
-    const response = await fetch("/api/get-id-token");
-    const data = await response.json();
-    return data.idToken;
-  },
-  tokenExchange: {
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "tokenExchange",
+    idTokenProvider: async () => {
+      // Your custom logic to get ID token
+      const response = await fetch("/api/get-id-token");
+      const data = await response.json();
+      return data.idToken;
+    },
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
@@ -145,14 +255,36 @@ const client = new SunnyAgentsClient({
 });
 ```
 
-## Token exchange configuration
+## Configuration options
+
+### SAML/OIDC Configuration
 
 ```typescript
-interface TokenExchangeConfig {
+interface SamlOidcAuthConfig {
+  type: "saml" | "oidc";
+  domain: string; // Auth0 domain (e.g., "your-tenant.auth0.com")
+  clientId: string; // Auth0 client ID
+  connection: string; // SAML/OIDC connection name (triggers auto-login)
+  organization?: string; // Optional organization ID
+  audience?: string; // API audience for access tokens
+  redirectUri?: string; // Callback URL (defaults to current origin + /callback.html)
+  usePopup?: boolean; // Use popup instead of redirect (default: true)
+  useModal?: boolean; // Use modal overlay instead of popup (default: true)
+  storageType?: "sessionStorage" | "localStorage"; // Token storage (default: "sessionStorage")
+}
+```
+
+### Token Exchange Configuration
+
+```typescript
+interface TokenExchangeAuthConfig {
+  type: "tokenExchange";
+  idTokenProvider: () => Promise<string | null>;
   partnerName: string; // Partner identifier (e.g., "sunny-health-external-mock")
   audience: string; // API audience (e.g., "https://api.sunnyhealthai-staging.com")
   clientId: string; // Auth0 client ID
   tokenExchangeUrl?: string; // Optional, defaults to "https://auth.sunnyhealth.live/oauth/token"
+  devRoute?: string; // Optional developer route
 }
 ```
 
@@ -214,6 +346,82 @@ const client = new SunnyAgentsClient({
 4. **Expire**: Session expires after timeout
 5. **Refresh**: New session created when expired
 
+## Passwordless Authentication
+
+For email or SMS-based passwordless authentication without passwords:
+
+```typescript
+import { PasswordlessAuthManager, SunnyAgentsClient, LLMWebSocketManager } from "@sunnyhealthai/agents-sdk";
+
+// Create WebSocket manager
+const wsManager = new LLMWebSocketManager({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+});
+
+// Create passwordless auth manager
+const authManager = new PasswordlessAuthManager({
+  wsManager,
+  migrateHistory: true, // Migrate anonymous chat history after auth
+  tokenExchange: {
+    partnerName: "your-partner-name",
+    audience: "https://api.sunnyhealthai-staging.com",
+    clientId: "your-client-id",
+  },
+});
+
+// Listen for OTP sent event
+authManager.onOtpSent((connection) => {
+  console.log(`OTP sent via ${connection}`);
+});
+
+// Listen for auth state changes
+authManager.onAuthStateChange((isAuthenticated) => {
+  console.log(`Authenticated: ${isAuthenticated}`);
+});
+
+// Start passwordless flow (email or SMS)
+await authManager.start({ email: "user@example.com" });
+// or
+await authManager.start({ phoneNumber: "+1234567890" });
+
+// Verify OTP code
+await authManager.verify({
+  email: "user@example.com",
+  code: "123456",
+});
+
+// Create client with shared WebSocket manager
+const client = new SunnyAgentsClient({
+  wsManager, // Share WebSocket connection
+  tokenExchange: {
+    partnerName: "your-partner-name",
+    audience: "https://api.sunnyhealthai-staging.com",
+    clientId: "your-client-id",
+  },
+});
+```
+
+**Features:**
+
+- Email or SMS authentication
+- No passwords required
+- WebSocket-based (no page refreshes)
+- Optional chat history migration
+- Automatic token management
+- Real-time OTP delivery
+
+**Configuration:**
+
+```typescript
+interface PasswordlessAuthConfig {
+  wsManager: LLMWebSocketManager; // Required - WebSocket manager instance
+  migrateHistory?: boolean; // Migrate anonymous chat history (default: false)
+  tokenExchange?: TokenExchangeConfig; // Optional token exchange config
+  storageKey?: string; // Storage key for auth state
+  storageType?: "memory" | "sessionStorage" | "localStorage"; // Storage type (default: "memory")
+}
+```
+
 ## Anonymous mode
 
 For applications that don't require authentication:
@@ -272,12 +480,33 @@ try {
 
 ## Examples
 
-### Basic authenticated client
+### SAML/OIDC Authentication
 
 ```typescript
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => localStorage.getItem("id_token"),
-  tokenExchange: {
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "my-tenant.auth0.com",
+    clientId: "abc123",
+    connection: "guardian-saml",
+    audience: "https://api.sunnyhealthai-staging.com",
+  },
+});
+```
+
+### Custom Token Exchange
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "tokenExchange",
+    idTokenProvider: async () => localStorage.getItem("id_token"),
     partnerName: "my-app",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "abc123",
@@ -285,16 +514,41 @@ const client = new SunnyAgentsClient({
 });
 ```
 
-### With custom token exchange URL
+### Passwordless Authentication
 
 ```typescript
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => localStorage.getItem("id_token"),
+import { PasswordlessAuthManager, SunnyAgentsClient, LLMWebSocketManager } from "@sunnyhealthai/agents-sdk";
+
+const wsManager = new LLMWebSocketManager({
+  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+});
+
+const authManager = new PasswordlessAuthManager({
+  wsManager,
+  migrateHistory: true,
   tokenExchange: {
     partnerName: "my-app",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "abc123",
-    tokenExchangeUrl: "https://custom-auth.example.com/oauth/token",
+  },
+});
+
+// Start authentication
+await authManager.start({ email: "user@example.com" });
+
+// Verify OTP
+await authManager.verify({
+  email: "user@example.com",
+  code: "123456",
+});
+
+// Create client
+const client = new SunnyAgentsClient({
+  wsManager,
+  tokenExchange: {
+    partnerName: "my-app",
+    audience: "https://api.sunnyhealthai-staging.com",
+    clientId: "abc123",
   },
 });
 ```
