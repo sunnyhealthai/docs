@@ -40,7 +40,7 @@ The SDK is organized around four main capabilities:
     Multiple authentication methods: SAML/OIDC via Auth0, custom token exchange, passwordless email/SMS, and anonymous mode. Automatic token management and refresh.
   </Card>
   <Card title="Artifacts" icon="duotone box" href="/artifacts">
-    Fetch and render rich content objects like doctor profiles, structured data, and custom artifacts. Automatic caching for performance. Type-safe artifact handling.
+    Rich content delivered inline in messages via WebSocket. Parse embedded JSON for doctor profiles and structured data.
   </Card>
 </CardGroup>
 
@@ -87,7 +87,7 @@ Simplest way to get started with automatic authentication handling:
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 // SAML/OIDC authentication (auto-login)
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "saml",
@@ -155,7 +155,7 @@ Automatic authentication via Auth0 with SAML or OIDC:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "saml",
@@ -174,7 +174,7 @@ For applications with custom authentication providers:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "tokenExchange",
@@ -204,8 +204,8 @@ const authManager = new PasswordlessAuthManager({
   tokenExchange: { /* ... */ },
 });
 
-await authManager.start({ email: "user@example.com" });
-await authManager.verify({ email: "user@example.com", code: "123456" });
+await authManager.startLogin({ email: "user@example.com" });
+await authManager.verifyCode({ email: "user@example.com", code: "123456" });
 ```
 
 ### Anonymous Mode

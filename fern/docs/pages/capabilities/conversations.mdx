@@ -153,7 +153,7 @@ const conversationId = await client.createConversation("Local Chat");
 
 Server-persisted conversations are automatically saved:
 
-```typesation
+```typescript
 // Conversation is automatically saved on server
 await client.createConversation("Persisted Chat");
 ```
@@ -174,17 +174,18 @@ if (savedId) {
 }
 ```
 
-### Vanilla widget persistence
+### Vanilla widget with pre-seeded conversation
 
-The vanilla widget automatically persists conversation IDs:
+For anonymous mode, you can pass a `conversationId` to use a specific conversation (e.g., restored from your own storage):
 
 ```typescript
 attachSunnyChat({
   container: document.getElementById("chat"),
   config: {
-    // ... config
+    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   },
-  conversationStorageKey: "my_app_conversation_id", // Custom key
+  anonymous: true,
+  conversationId: savedId, // Pre-seed with ID from your storage
 });
 ```
 

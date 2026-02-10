@@ -1,82 +1,84 @@
 ---
 title: Artifacts
-subtitle: Fetch and render rich content objects
+subtitle: Parse and render rich content delivered inline
 slug: artifacts
 ---
 
-Artifacts are rich content objects referenced in chat messages. Learn how to fetch, cache, and render artifacts like doctor profiles and custom data structures.
+Artifacts are rich content objects embedded in chat messages. Learn how the WebSocket delivers them JIT and how to parse and render artifacts like doctor profiles and custom data structures.
 
 ## What are artifacts?
 
 Artifacts are structured data objects that provide additional context or information beyond plain text messages. Common examples include:
 
 - **Doctor profiles**: Healthcare provider information with NPI, specialty, ratings, etc.
+- **Provider search results**: Lists of providers from search queries with locations and distances
 - **Structured data**: Custom data objects specific to your use case
 - **Rich content**: Any JSON-serializable object
 
-## Fetching artifacts
+## How artifacts are delivered
 
-Fetch an artifact by its ID:
+Artifacts are **not fetched via REST API**. The WebSocket backend expands artifact tags just-in-time (JIT) during streaming. When the AI references an artifact, the backend replaces the tag with the full artifact JSON and embeds it directly in `message.text`.
 
-```typescript
-const artifact = await client.getArtifact<DoctorProfileArtifact>("artifact-id");
+You receive artifact content **inline**—no separate fetch is needed. The message text contains embedded JSON objects with `item_type`, `item_content`, and `created_at`.
 
-if (artifact) {
-  console.log("Artifact type:", artifact.item_type);
-  console.log("Content:", artifact.item_content);
-}
-```
+## Parsing embedded artifacts
 
-### Type-safe fetching
-
-Use TypeScript generics for type safety:
+Parse `message.text` for JSON objects with `item_type` and `item_content`:
 
 ```typescript
-interface DoctorProfileArtifact {
-  npi: string;
-  first_name?: string;
-  last_name?: string;
-  specialty?: string;
-  rating?: number;
-  // ... other fields
-}
+function parseEmbeddedArtifacts(text: string): Array<{ item_type: string; item_content: unknown }> {
+  const artifacts: Array<{ item_type: string; item_content: unknown }> = [];
+  let i = 0;
 
-const artifact = await client.getArtifact<DoctorProfileArtifact>("artifact-id");
+  while (i < text.length) {
+    const start = text.indexOf('{', i);
+    if (start === -1) break;
 
-if (artifact) {
-  const profile = artifact.item_content;
-  console.log("Doctor:", profile.first_name, profile.last_name);
-  console.log("Specialty:", profile.specialty);
+    let braceCount = 0;
+    let end = start;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let j = start; j < text.length; j++) {
+      const char = text[j];
+      if (escapeNext) { escapeNext = false; continue; }
+      if (char === '\\') { escapeNext = true; continue; }
+      if (char === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (char === '{') braceCount++;
+      else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0) { end = j + 1; break; }
+      }
+    }
+
+    if (braceCount === 0 && end > start) {
+      try {
+        const obj = JSON.parse(text.slice(start, end));
+        if (obj && typeof obj === 'object' && obj.item_type && obj.item_content) {
+          artifacts.push({ item_type: obj.item_type, item_content: obj.item_content });
+        }
+      } catch { /* skip invalid JSON */ }
+      i = end;
+    } else {
+      i = start + 1;
+    }
+  }
+  return artifacts;
 }
 ```
 
 ## Artifact structure
 
+The inline JSON format embedded in message text:
+
 ```typescript
-interface ChatArtifact<T = unknown> {
-  id: string; // Artifact ID
-  item_type: string; // Type identifier (e.g., "doctor_profile")
-  item_content: T; // Typed content
-  content?: T; // Alternative content field (backward compatibility)
+interface InlineArtifact<T = unknown> {
+  item_type: string;    // Type identifier (e.g., "doctor_profile")
+  item_content: T;      // Typed content
+  created_at?: string;  // ISO timestamp (optional)
 }
 ```
-
-## Artifact caching
-
-Artifacts are automatically cached:
-
-```typescript
-// First call - fetches from API
-const artifact1 = await client.getArtifact("artifact-id");
-
-// Second call - returns cached result (no API call)
-const artifact2 = await client.getArtifact("artifact-id");
-```
-
-**Benefits:**
-- Faster subsequent access
-- Reduced API calls
-- Better performance
 
 ## Doctor profile artifacts
 
@@ -107,26 +109,78 @@ interface DoctorProfileArtifact {
 }
 ```
 
-### Fetching doctor profiles
+### Parsing doctor profiles from message text
 
 ```typescript
-const artifact = await client.getArtifact<DoctorProfileArtifact>("doctor-artifact-id");
+const artifacts = parseEmbeddedArtifacts(message.text);
 
-if (artifact && artifact.item_type === "doctor_profile") {
-  const profile = artifact.item_content;
-  
-  console.log("Name:", `${profile.first_name} ${profile.last_name}`);
-  console.log("Specialty:", profile.specialty);
-  console.log("Rating:", profile.rating);
-  console.log("NPI:", profile.npi);
+artifacts.forEach(({ item_type, item_content }) => {
+  if (item_type === "doctor_profile") {
+    const profile = item_content as DoctorProfileArtifact;
+    console.log("Name:", `${profile.first_name} ${profile.last_name}`);
+    console.log("Specialty:", profile.specialty);
+    console.log("Rating:", profile.rating);
+    console.log("NPI:", profile.npi);
+  }
+});
+```
+
+## Provider search results artifacts
+
+The `provider_search_results` artifact type contains search results from the provider search tool:
+
+```typescript
+interface ProviderSearchResultsArtifact {
+  providers: ProviderResult[];
+  query: string;
+  location: string;
+  taxonomy_codes: string[];
+  plan_name: string;
+  filter_gender: string | null;
+  filter_languages: string[] | null;
 }
+
+interface ProviderResult {
+  npi: string;
+  name: string | null;
+  specialties: string[];
+  degrees: string[];
+  languages: string[];
+  locations: LocationResult[];
+}
+
+interface LocationResult {
+  name: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  distance_miles: number | null;
+}
+```
+
+### Parsing provider search results
+
+```typescript
+const artifacts = parseEmbeddedArtifacts(message.text);
+
+artifacts.forEach(({ item_type, item_content }) => {
+  if (item_type === "provider_search_results") {
+    const results = item_content as ProviderSearchResultsArtifact;
+    console.log("Query:", results.query);
+    results.providers.forEach((provider) => {
+      console.log(provider.name, provider.npi, provider.specialties);
+    });
+  }
+});
 ```
 
 ## Rendering artifacts in UI
 
 ### Vanilla widget
 
-The vanilla widget automatically renders doctor profiles:
+The vanilla widget automatically parses and renders doctor profiles and provider search results from message text:
 
 ```typescript
 attachSunnyChat({
@@ -134,111 +188,82 @@ attachSunnyChat({
   // ... config
 });
 
-// Doctor profiles are automatically rendered when referenced in messages
+// Doctor profiles and provider search results are automatically rendered when embedded in messages
 ```
 
 ### Custom UI
 
-Render artifacts in your custom UI:
+Parse message text and render artifacts in your custom UI:
 
 ```typescript
-// In your message rendering logic
-message.outputItems?.forEach((item) => {
-  if (item.type === "artifact" && item.id) {
-    // Fetch and render artifact
-    renderArtifact(item.id);
-  }
-});
+function renderMessage(message: SunnyAgentMessage) {
+  const artifacts = parseEmbeddedArtifacts(message.text);
 
-async function renderArtifact(artifactId: string) {
-  const artifact = await client.getArtifact(artifactId);
-  
-  if (artifact) {
-    if (artifact.item_type === "doctor_profile") {
-      renderDoctorProfile(artifact.item_content);
-    } else {
-      renderGenericArtifact(artifact);
-    }
+  return (
+    <div>
+      <p>{message.text}</p>
+      {artifacts.map((artifact, idx) => (
+        <ArtifactRenderer key={idx} artifact={artifact} />
+      ))}
+    </div>
+  );
+}
+
+function ArtifactRenderer({ artifact }: { artifact: { item_type: string; item_content: unknown } }) {
+  if (artifact.item_type === "doctor_profile") {
+    return renderDoctorProfile(artifact.item_content as DoctorProfileArtifact);
   }
+  if (artifact.item_type === "provider_search_results") {
+    return renderProviderSearchResults(artifact.item_content as ProviderSearchResultsArtifact);
+  }
+  return renderGenericArtifact(artifact.item_content);
 }
 ```
 
-## Artifact references in messages
+## Embedded artifact format
 
-Artifacts are referenced in messages using special tags:
+Message text contains JSON blobs—no `{art_tag}` tags are visible to the client. The backend expands `{art_tag}uuid{/art_tag}` server-side before streaming. What you receive looks like:
 
-```typescript
-// Message text may contain artifact references
-// Example: "Here's a doctor profile: {art_tag}artifact-id{/art_tag}"
-
-// Parse artifact references
-function parseArtifactReferences(text: string): string[] {
-  const matches = text.match(/{art_tag}([^{]+){\/art_tag}/g);
-  return matches?.map(m => m.replace(/{art_tag}|{\/art_tag}/g, "")) || [];
-}
+```
+Here's a doctor who might work for you: {"item_type":"doctor_profile","item_content":{"npi":"1234567890","first_name":"Jane","last_name":"Smith","specialty":"Cardiology","rating":4.8,"review_count":150},"created_at":"2025-01-15T12:00:00Z"}
 ```
 
 ## Error handling
 
-### Missing artifacts
+### Malformed JSON
 
-```typescript
-const artifact = await client.getArtifact("artifact-id");
-
-if (!artifact) {
-  console.error("Artifact not found");
-  // Show error message to user
-}
-```
-
-### Authentication errors
-
-Artifact fetching requires authentication:
+When parsing, handle invalid JSON gracefully:
 
 ```typescript
 try {
-  const artifact = await client.getArtifact("artifact-id");
-} catch (error) {
-  if (error.message.includes("token") || error.message.includes("auth")) {
-    console.error("Authentication required for artifacts");
-    // Redirect to login or show error
+  const obj = JSON.parse(jsonStr);
+  if (obj?.item_type && obj?.item_content) {
+    // Valid artifact
   }
-}
-```
-
-### Network errors
-
-```typescript
-try {
-  const artifact = await client.getArtifact("artifact-id");
-} catch (error) {
-  console.error("Failed to fetch artifact:", error);
-  // Retry or show error message
+} catch {
+  // Skip or show fallback for malformed JSON
 }
 ```
 
 ## Best practices
 
-1. **Type safety**: Use TypeScript generics for type-safe artifact access
-2. **Error handling**: Always handle missing or failed artifact fetches
-3. **Caching**: Rely on SDK caching, don't implement your own
-4. **Loading states**: Show loading indicators while fetching artifacts
-5. **Fallback UI**: Provide fallback UI for failed artifact fetches
+1. **Parse defensively**: Wrap JSON.parse in try/catch; skip invalid objects
+2. **Type safety**: Use TypeScript assertions or guards for `item_content` by `item_type`
+3. **Fallback UI**: Provide fallback when an artifact fails to parse
+4. **No loading states**: Artifacts arrive with the message—no fetch loading needed
 
 ## Examples
 
-### Fetch and display doctor profile
+### Display doctor profile from message
 
 ```typescript
-async function displayDoctorProfile(artifactId: string) {
-  const artifact = await client.getArtifact<DoctorProfileArtifact>(artifactId);
-  
-  if (!artifact) {
-    return <div>Profile not available</div>;
-  }
-  
-  const profile = artifact.item_content;
-  
+function DoctorProfileFromMessage({ message }: { message: SunnyAgentMessage }) {
+  const artifacts = parseEmbeddedArtifacts(message.text);
+  const doctorProfile = artifacts.find(a => a.item_type === "doctor_profile");
+
+  if (!doctorProfile) return null;
+
+  const profile = doctorProfile.item_content as DoctorProfileArtifact;
   return (
     <div className="doctor-profile">
       <h3>{profile.first_name} {profile.last_name}</h3>
@@ -252,43 +277,20 @@ async function displayDoctorProfile(artifactId: string) {
 }
 ```
 
-### Handle artifact in message
+### Parse and render all artifacts in a message
 
 ```typescript
-function renderMessage(message: SunnyAgentMessage) {
-  // Check for artifact references in text
-  const artifactIds = parseArtifactReferences(message.text);
-  
+function MessageWithArtifacts({ message }: { message: SunnyAgentMessage }) {
+  const artifacts = parseEmbeddedArtifacts(message.text);
+
   return (
     <div>
-      <p>{message.text}</p>
-      {artifactIds.map(id => (
-        <ArtifactRenderer key={id} artifactId={id} />
+      <MarkdownText text={message.text} />
+      {artifacts.map((artifact, i) => (
+        <ArtifactCard key={i} artifact={artifact} />
       ))}
     </div>
   );
-}
-```
-
-### React hook for artifacts
-
-```typescript
-function useArtifact<T>(artifactId: string | null) {
-  const [artifact, setArtifact] = useState<ChatArtifact<T> | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    if (!artifactId) return;
-
-    setLoading(true);
-    client.getArtifact<T>(artifactId)
-      .then(setArtifact)
-      .catch(setError)
-      .finally(() => setLoading(false));
-  }, [artifactId]);
-
-  return { artifact, loading, error };
 }
 ```
 

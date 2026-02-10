@@ -185,7 +185,7 @@ interface SunnyAgentMessageItem {
 Common output item types:
 - **`mcp_approval_request`**: Tool execution approval request
 - **`message`**: Text message content
-- **`artifact`**: Reference to an artifact
+- **`artifact`**: Artifact content delivered inline in message text (WebSocket JIT expansion)
 
 ## Markdown support
 
@@ -262,5 +262,5 @@ await client.sendMessage("Can you help me understand my insurance coverage?", {
 ## Next steps
 
 - **[Conversations](/conversations)** - Learn about managing conversations
-- **[Artifacts](/artifacts)** - Fetch and render rich content
+- **[Artifacts](/artifacts)** - Parse and render rich content delivered inline
 - **[Custom UI Tutorial](/custom-ui)** - Build a custom chat interface

@@ -61,16 +61,12 @@ interface SunnyAgentMessage {
 
 ## Artifacts
 
-**Artifacts** are rich content objects referenced in messages. Common examples include:
+**Artifacts** are rich content objects delivered inline in message text via the WebSocket. Common examples include:
 
 - **Doctor Profiles**: Healthcare provider information with NPI, specialty, ratings, etc.
 - **Structured Data**: Custom data objects specific to your use case
 
-Artifacts are fetched on-demand using the `getArtifact` method and are automatically cached:
-
-```typescript
-const artifact = await client.getArtifact<DoctorProfileArtifact>("artifact-id");
-```
+Artifacts are delivered inline in message text via the WebSocket. The backend expands artifact tags JIT during streaming; clients receive the full artifact JSON (`item_content`, `item_type`) embedded in message text—no separate fetch required.
 
 ## Authentication
 
@@ -159,6 +155,8 @@ await client.sendMcpApproval(
   "Not needed" // optional reason
 );
 ```
+
+The `approvalRequestId` is the `id` field of the `mcp_approval_request` output item in the message's `outputItems` array.
 
 ## File Attachments
 

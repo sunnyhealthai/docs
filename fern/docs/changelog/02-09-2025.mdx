@@ -1,0 +1,23 @@
+---
+title: February 9, 2025
+slug: 02-09-2025
+tags: ["artifacts", "websocket", "breaking-change"]
+---
+
+## Breaking changes
+
+### Artifacts no longer fetched via REST API
+
+Chat artifacts are no longer fetched via `GET /v1/chat-artifacts/{id}` or `client.getArtifact()`. The WebSocket backend now expands artifact tags just-in-time (JIT) during streaming and delivers artifact content **inline in message text**.
+
+**Migration:**
+- Remove any `client.getArtifact(artifactId)` calls
+- Parse `message.text` for embedded JSON objects with `item_type` and `item_content`
+- The vanilla widget already parses and renders embedded artifacts automatically
+- See the [Artifacts](/artifacts) documentation for parsing examples
+
+## Removed
+
+- `SunnyAgentsClient.getArtifact()` method
+- `apiBaseUrl` configuration option (was only used for artifact fetch)
+- REST endpoint `/v1/chat-artifacts/{artifactId}`

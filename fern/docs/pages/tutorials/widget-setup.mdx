@@ -141,7 +141,7 @@ For production with user authentication, use the unified `createSunnyChat` API:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("sunny-chat"),
   auth: {
     type: "saml",
@@ -158,7 +158,7 @@ const chat = await createSunnyChat({
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("sunny-chat"),
   auth: {
     type: "tokenExchange",
@@ -211,9 +211,9 @@ attachSunnyChat({
 });
 ```
 
-### Conversation storage
+### Pre-seeded conversation ID
 
-Customize how conversations are persisted:
+For anonymous mode, you can pass a `conversationId` to use a specific conversation (e.g., restored from your own storage):
 
 ```typescript
 attachSunnyChat({
@@ -221,7 +221,8 @@ attachSunnyChat({
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   },
-  conversationStorageKey: "my_app_conversation_id",
+  anonymous: true,
+  conversationId: "your-saved-conversation-id",
 });
 ```
 

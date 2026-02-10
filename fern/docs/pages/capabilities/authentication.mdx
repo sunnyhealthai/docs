@@ -331,11 +331,11 @@ Token refresh happens:
 
 ### Session storage
 
-Sessions are stored in localStorage by default:
+Auth0 tokens use `sessionStorage` by default (configurable via `storageType` in `SamlOidcAuthConfig`). The `SunnyAgentsClient` uses `sessionStorageKey` for session IDs when provided:
 
 ```typescript
 const client = new SunnyAgentsClient({
-  sessionStorageKey: "my_app_session", // Custom key
+  sessionStorageKey: "my_app_session", // Custom key for session IDs
   // ... other config
 });
 ```
@@ -343,7 +343,7 @@ const client = new SunnyAgentsClient({
 ### Session lifecycle
 
 1. **Create**: Session created on first connection
-2. **Store**: Session ID stored in localStorage
+2. **Store**: Session/token storage per auth type (sessionStorage for Auth0 by default)
 3. **Reuse**: Session reused on reconnection
 4. **Expire**: Session expires after timeout
 5. **Refresh**: New session created when expired
@@ -382,12 +382,12 @@ authManager.onAuthStateChange((isAuthenticated) => {
 });
 
 // Start passwordless flow (email or SMS)
-await authManager.start({ email: "user@example.com" });
+await authManager.startLogin({ email: "user@example.com" });
 // or
-await authManager.start({ phoneNumber: "+1234567890" });
+await authManager.startLogin({ phoneNumber: "+1234567890" });
 
 // Verify OTP code
-await authManager.verify({
+await authManager.verifyCode({
   email: "user@example.com",
   code: "123456",
 });
@@ -534,10 +534,10 @@ const authManager = new PasswordlessAuthManager({
 });
 
 // Start authentication
-await authManager.start({ email: "user@example.com" });
+await authManager.startLogin({ email: "user@example.com" });
 
 // Verify OTP
-await authManager.verify({
+await authManager.verifyCode({
   email: "user@example.com",
   code: "123456",
 });

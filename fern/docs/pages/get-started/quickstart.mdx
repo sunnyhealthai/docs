@@ -191,7 +191,7 @@ For production applications with user authentication, you can use the unified `c
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "saml",
@@ -208,7 +208,7 @@ const chat = await createSunnyChat({
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "tokenExchange",

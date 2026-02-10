@@ -13,7 +13,7 @@ info:
     - **Vanilla Widget**: Drop-in healthcare concierge widget for quick integration
     - **Real-time Messaging**: WebSocket-based streaming responses for instant care guidance
     - **Token Exchange**: Secure authentication flow using ID tokens for HIPAA-compliant sessions
-    - **Artifact Support**: Fetch and render rich content like doctor profiles, provider information, and appointment details
+    - **Artifact Support**: Rich content delivered inline via WebSocket JIT transformation
     - **MCP Approvals**: Handle tool execution approvals interactively for secure healthcare operations
     
     ### Authentication
@@ -25,7 +25,7 @@ info:
     - WebSocket connections are made directly to the WebSocket URL
     - Authentication happens via `auth.upgrade` messages over the WebSocket connection
     - Token exchange is handled transparently when configured
-    - Artifacts (like doctor profiles) are automatically cached for performance
+    - Artifacts are expanded JIT in the WebSocket stream and delivered inline in message text
     - Designed for healthcare use cases: provider search, appointment booking, health information, and benefits navigation
   version: 1.0.0
   title: Sunny Agents SDK API
@@ -41,7 +41,7 @@ tags:
   - name: conversations
     description: Conversation management operations
   - name: artifacts
-    description: Chat artifact fetching and management
+    description: Inline artifact format in message text (WebSocket JIT expansion)
   - name: authentication
     description: Authentication and token exchange operations
 paths:
@@ -109,58 +109,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  /v1/chat-artifacts/{artifactId}:
-    get:
-      tags:
-        - artifacts
-      summary: Fetch a chat artifact
-      description: |
-        Retrieve a chat artifact by its ID. Artifacts are rich content objects
-        referenced in chat messages, such as doctor profiles or other structured data.
-        Requires authenticated access.
-      operationId: getArtifact
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: artifactId
-          in: path
-          required: true
-          description: The artifact ID to fetch
-          schema:
-            type: string
-            example: "artifact_abc123"
-      responses:
-        "200":
-          description: Artifact retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ChatArtifact"
-              examples:
-                doctorProfile:
-                  summary: Doctor profile artifact
-                  value:
-                    id: "artifact_abc123"
-                    item_type: "doctor_profile"
-                    item_content:
-                      npi: "1234567890"
-                      first_name: "Jane"
-                      last_name: "Smith"
-                      specialty: "Cardiology"
-                      rating: 4.8
-                      review_count: 150
-        "401":
-          description: Unauthorized - Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: Artifact not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 components:
   securitySchemes:
     BearerAuth:
@@ -188,14 +136,14 @@ components:
           example: 3600
     ChatArtifact:
       type: object
+      description: Inline artifact format embedded in message text (WebSocket JIT expansion)
       required:
-        - id
         - item_type
         - item_content
       properties:
         id:
           type: string
-          description: Unique artifact identifier
+          description: Unique artifact identifier (may be omitted in inline format)
         item_type:
           type: string
           description: Type of artifact (e.g., "doctor_profile")
@@ -208,6 +156,10 @@ components:
           type: object
           description: Alternative content field (for backward compatibility)
           additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: Artifact creation timestamp (in inline format)
     DoctorProfileArtifact:
       type: object
       properties:

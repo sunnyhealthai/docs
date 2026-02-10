@@ -27,7 +27,7 @@ yarn add @sunnyhealthai/agents-sdk
 ## Package Information
 
 - **Package Name**: `@sunnyhealthai/agents-sdk`
-- **Current Version**: `0.0.9`
+- **Current Version**: `0.0.11`
 - **Registry**: [npm](https://www.npmjs.com/package/@sunnyhealthai/agents-sdk)
 - **TypeScript**: Full type definitions included
 - **ESM & CJS**: Supports both ES modules and CommonJS
@@ -61,6 +61,9 @@ import {
   type SunnyAgentsClientSnapshot,
   type ChatArtifact,
   type DoctorProfileArtifact,
+  type ProviderSearchResultsArtifact,
+  type ProviderResult,
+  type LocationResult,
   type VanillaChatOptions,
   type VanillaChatInstance,
   type VanillaChatColors,
@@ -70,6 +73,9 @@ import {
   type TokenExchangeAuthConfig,
   type Auth0ProviderConfig,
   type PasswordlessAuthConfig,
+  type PasswordlessStartOptions,
+  type PasswordlessVerifyOptions,
+  type PopupOptions,
 } from "@sunnyhealthai/agents-sdk";
 ```
 
@@ -93,7 +99,7 @@ The `createSunnyChat` function provides the simplest way to set up chat with aut
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 // SAML/OIDC authentication (auto-login)
-const chat = await createSunnyChat({
+const { client, destroy } = await createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "saml",
@@ -103,6 +109,7 @@ const chat = await createSunnyChat({
     audience: "https://api.sunnyhealthai-staging.com",
   },
 });
+// Use client for programmatic access; call destroy() to clean up
 ```
 
 ### Headless Client
