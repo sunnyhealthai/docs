@@ -7,6 +7,17 @@ description: Learn about conversations, messages, artifacts, and authentication 
 
 Understanding these core concepts will help you build effective healthcare concierge experiences with the Sunny Agents SDK. Whether you're building provider search, appointment booking, or health information tools, these concepts form the foundation of your application.
 
+## Environments
+
+The SDK connects to different endpoints depending on your environment:
+
+| Environment | WebSocket (Chat API) | Sunny Central (Partner Portal) |
+|-------------|----------------------|--------------------------------|
+| **Staging** | `wss://chat.api.sunnyhealthai-staging.com` | [platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com) |
+| **Production** | `wss://chat.api.sunnyhealthai.com` | [platform.sunnyhealthai.com](https://platform.sunnyhealthai.com) |
+
+The default `websocketUrl` is the staging URL. Override it for production when appropriate. Use the same environment for Sunny Central and the WebSocket URL (staging credentials with staging chat, production with production).
+
 ## Conversations
 
 A **conversation** is a collection of messages between a patient (or healthcare user) and the AI concierge. Each conversation has:
@@ -70,16 +81,41 @@ Artifacts are delivered inline in message text via the WebSocket. The backend ex
 
 ## Authentication
 
-The SDK supports two authentication modes:
+The SDK supports four authentication modes:
 
-### Authenticated Mode
+### SAML/OIDC (Enterprise SSO)
 
-Uses token exchange to convert ID tokens (from Auth0, Firebase, etc.) into access tokens:
+Automatic authentication via Auth0 SAML or OIDC connections. Triggers a popup login automatically:
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "saml", // or "oidc"
+});
+```
+
+### Token Exchange
+
+For applications with custom authentication providers. Your app provides an ID token and the SDK exchanges it for an access token:
 
 1. Your app provides an ID token via `idTokenProvider`
 2. SDK exchanges it for an access token
-3. Access token is used for WebSocket and API authentication
+3. Access token is used for WebSocket authentication
 4. Token is automatically refreshed when expired
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
+  idTokenProvider: async () => localStorage.getItem("id_token"),
+});
+```
+
+Or use the headless client directly:
 
 ```typescript
 const client = new SunnyAgentsClient({
@@ -88,7 +124,21 @@ const client = new SunnyAgentsClient({
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
+    organization: "org_xxx",
   },
+});
+```
+
+### Passwordless
+
+Email or SMS-based authentication without passwords. The SDK renders a verification UI in the chat:
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
 });
 ```
 
@@ -98,7 +148,6 @@ No authentication required. Conversations are local-only:
 
 ```typescript
 const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   createServerConversations: false,
 });
 ```
@@ -107,7 +156,7 @@ const client = new SunnyAgentsClient({
 
 The SDK manages WebSocket connections automatically:
 
-1. **Connection**: Establish WebSocket connection directly to the WebSocket URL
+1. **Connection**: Establish WebSocket connection (default: `wss://chat.api.sunnyhealthai-staging.com`)
 2. **Authentication**: If authenticated, send `auth.upgrade` message with access token
 3. **Messaging**: Send/receive messages
 4. **Reconnection**: Automatically reconnect on failure
@@ -216,6 +265,6 @@ State updates trigger events, allowing you to keep your UI in sync.
     icon="duotone box"
     href="/artifacts"
   >
-    Fetch and render rich content objects
+    Parse and render rich content delivered inline
   </Card>
 </CardGroup>

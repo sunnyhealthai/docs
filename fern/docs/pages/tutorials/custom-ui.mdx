@@ -19,9 +19,8 @@ npm install @sunnyhealthai/agents-sdk
 ```typescript
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
-const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-});
+// websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
+const client = new SunnyAgentsClient();
 ```
 
 ## React example
@@ -34,9 +33,7 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 import type { SunnyAgentsClientSnapshot, SunnyAgentMessage } from "@sunnyhealthai/agents-sdk";
 
 export function ChatComponent() {
-  const [client] = useState(() => new SunnyAgentsClient({
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  }));
+  const [client] = useState(() => new SunnyAgentsClient());
 
   const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
     () => client.getSnapshot()
@@ -98,9 +95,7 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
 
 export function useChat() {
-  const [client] = useState(() => new SunnyAgentsClient({
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  }));
+  const [client] = useState(() => new SunnyAgentsClient());
 
   const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
     () => client.getSnapshot()
@@ -177,9 +172,7 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 import type { SunnyAgentsClientSnapshot, SunnyAgentMessage } from "@sunnyhealthai/agents-sdk";
 
-const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-});
+const client = new SunnyAgentsClient();
 
 const snapshot = ref<SunnyAgentsClientSnapshot>(client.getSnapshot());
 const input = ref("");
@@ -235,9 +228,7 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 class ChatUI {
   constructor(container) {
     this.container = container;
-    this.client = new SunnyAgentsClient({
-      websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-    });
+    this.client = new SunnyAgentsClient();
 
     this.setupUI();
     this.setupEventListeners();

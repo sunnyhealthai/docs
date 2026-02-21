@@ -11,6 +11,12 @@ This guide shows you how to integrate the Sunny Agents SDK into your application
 The fastest way to add chat to your app:
 
 <Steps>
+<Step title="Get your credentials">
+
+Sign in to [Sunny Central](https://platform.sunnyhealthai.com) (or [staging](https://platform.sunnyhealthai-staging.com)) and go to **Developer Tools**. Create an API key and note your partner name. See [Partner Setup](/partner-setup) for details.
+
+</Step>
+
 <Step title="Install the SDK">
 
 Install the Sunny Agents SDK:
@@ -44,8 +50,36 @@ Create an HTML file and add a container for the chat widget:
 <body>
   <div id="sunny-chat"></div>
   <script type="module">
+    import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+    // Automatically handles authentication and server configuration
+    const chat = await createSunnyChat({
+      container: document.getElementById("sunny-chat"),
+      partnerIdentifier: "acme-health",
+      publicKey: "pk-sunnyagents_abc_xyz",
+      authType: "passwordless",
+      headerTitle: "Sunny Health Concierge",
+      placeholder: "How can I help you find care?",
+    });
+  </script>
+</body>
+</html>
+```
+
+**Or use the lower-level widget for anonymous/local development only:**
+
+```html title="index.html"
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sunny Agents Chat</title>
+</head>
+<body>
+  <div id="sunny-chat"></div>
+  <script type="module">
     import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
 
+    // Anonymous mode only — no sdk.session.create, no auth
     attachSunnyChat({
       container: document.getElementById("sunny-chat"),
       config: {
@@ -59,36 +93,7 @@ Create an HTML file and add a container for the chat widget:
 </html>
 ```
 
-**Or use the unified API with automatic authentication:**
-
-```html title="index.html"
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Sunny Agents Chat</title>
-</head>
-<body>
-  <div id="sunny-chat"></div>
-  <script type="module">
-    import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-    // Automatically handles SAML/OIDC authentication
-    createSunnyChat({
-      container: document.getElementById("sunny-chat"),
-      auth: {
-        type: "saml",
-        domain: "your-tenant.auth0.com",
-        clientId: "your-client-id",
-        connection: "guardian-saml",
-        audience: "https://api.sunnyhealthai-staging.com",
-      },
-      headerTitle: "Sunny Health Concierge",
-      placeholder: "How can I help you find care?",
-    });
-  </script>
-</body>
-</html>
-```
+For production or authenticated use, use `createSunnyChat` instead.
 
 </Step>
 
@@ -101,7 +106,7 @@ Open your HTML file in a browser and start chatting! The widget will automatical
 
 ## Quick start with the headless client
 
-For custom UI implementations, use the headless client:
+For custom UI implementations, use the headless client. The example below uses **anonymous mode** (no server persistence). For authenticated use, use `createSunnyChat` and access `chat.client`.
 
 <Steps>
 <Step title="Install the SDK">
@@ -115,9 +120,8 @@ Same as above - install the SDK package.
 ```typescript title="app.ts"
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
-const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-});
+// Anonymous mode — websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
+const client = new SunnyAgentsClient();
 ```
 
 </Step>
@@ -166,9 +170,10 @@ if (activeConversation) {
 ### Basic configuration
 
 ```typescript
-const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-});
+import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+
+// websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
+const client = new SunnyAgentsClient();
 ```
 
 ### Anonymous mode
@@ -177,29 +182,24 @@ For local-only conversations without server persistence:
 
 ```typescript
 const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   createServerConversations: false,
 });
 ```
 
 ### Authenticated mode
 
-For production applications with user authentication, you can use the unified `createSunnyChat` API:
+For production applications with user authentication, use the unified `createSunnyChat` API. It only requires three parameters -- all Auth0 configuration is provided by the server automatically:
 
 **SAML/OIDC Authentication (Recommended):**
 
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const { client, destroy } = await createSunnyChat({
+const chat = await createSunnyChat({
   container: document.getElementById("chat"),
-  auth: {
-    type: "saml",
-    domain: "your-tenant.auth0.com",
-    clientId: "your-client-id",
-    connection: "guardian-saml", // Auto-login enabled
-    audience: "https://api.sunnyhealthai-staging.com",
-  },
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "saml", // or "oidc"
 });
 ```
 
@@ -208,17 +208,14 @@ const { client, destroy } = await createSunnyChat({
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const { client, destroy } = await createSunnyChat({
+const chat = await createSunnyChat({
   container: document.getElementById("chat"),
-  auth: {
-    type: "tokenExchange",
-    idTokenProvider: async () => {
-      // Return ID token from your auth provider
-      return localStorage.getItem("id_token");
-    },
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-client-id",
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
+  idTokenProvider: async () => {
+    // Return ID token from your auth provider
+    return localStorage.getItem("id_token");
   },
 });
 ```
@@ -227,7 +224,6 @@ const { client, destroy } = await createSunnyChat({
 
 ```typescript
 const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   idTokenProvider: async () => {
     // Return ID token from your auth provider
     return localStorage.getItem("id_token");
@@ -236,6 +232,7 @@ const client = new SunnyAgentsClient({
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
+    organization: "org_xxx",
   },
 });
 ```
@@ -250,9 +247,7 @@ import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
 
 export function ChatComponent() {
-  const [client] = useState(() => new SunnyAgentsClient({
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  }));
+  const [client] = useState(() => new SunnyAgentsClient());
   
   const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
     () => client.getSnapshot()

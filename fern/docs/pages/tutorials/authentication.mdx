@@ -19,7 +19,7 @@ This tutorial covers all authentication methods and helps you choose the right o
 
 ## Quick start: SAML/OIDC Authentication (Recommended)
 
-The easiest way to add authentication is using the unified `createSunnyChat` API with SAML/OIDC:
+The easiest way to add authentication is using the unified `createSunnyChat` API with SAML/OIDC. All Auth0 configuration (domain, client ID, connection) is provided by the server automatically:
 
 ### Step 1: Configure SAML/OIDC
 
@@ -28,21 +28,17 @@ import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 const chat = await createSunnyChat({
   container: document.getElementById("chat"),
-  auth: {
-    type: "saml",
-    domain: "your-tenant.auth0.com",
-    clientId: "your-client-id",
-    connection: "guardian-saml", // SAML connection name
-    audience: "https://api.sunnyhealthai-staging.com",
-  },
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "saml", // or "oidc"
 });
 ```
 
 ### Step 2: Test authentication
 
 Authentication happens automatically when you create the chat instance. The SDK will:
-1. Trigger SAML/OIDC login (popup or redirect)
-2. Connect directly to the WebSocket URL
+1. Connect to the WebSocket and receive auth config from the server
+2. Trigger SAML/OIDC login (popup)
 3. Send `auth.upgrade` message with ID token
 4. Receive `auth.upgraded` response to complete authentication
 
@@ -57,15 +53,12 @@ import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 const chat = await createSunnyChat({
   container: document.getElementById("chat"),
-  auth: {
-    type: "tokenExchange",
-    idTokenProvider: async () => {
-      // Return ID token from your auth provider
-      return localStorage.getItem("id_token");
-    },
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-client-id",
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
+  idTokenProvider: async () => {
+    // Return ID token from your auth provider
+    return localStorage.getItem("id_token");
   },
 });
 ```
@@ -76,7 +69,6 @@ const chat = await createSunnyChat({
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   idTokenProvider: async () => {
     // Return ID token from your auth provider
     return localStorage.getItem("id_token");
@@ -85,6 +77,7 @@ const client = new SunnyAgentsClient({
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
+    organization: "org_xxx",
   },
 });
 ```
@@ -94,6 +87,24 @@ const client = new SunnyAgentsClient({
 ```typescript
 // Send a message - authentication happens automatically
 await client.sendMessage("Hello!");
+```
+
+## Passwordless Authentication Setup
+
+Passwordless authentication is the simplest flow. Users verify via email or SMS OTP, and the SDK handles the verification UI in-chat:
+
+```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
+});
+
+// The chat starts in anonymous mode. When the user is prompted to verify,
+// a verification form appears in the chat automatically.
 ```
 
 ## Auth0 integration
@@ -108,33 +119,35 @@ npm install @auth0/auth0-react
 
 ```tsx
 import { useAuth0 } from "@auth0/auth0-react";
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-import { useEffect, useState } from "react";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+import { useEffect, useRef } from "react";
+import type { VanillaChatInstance } from "@sunnyhealthai/agents-sdk";
 
 export function AuthenticatedChat() {
   const { getIdTokenClaims, isAuthenticated } = useAuth0();
-  const [client, setClient] = useState<SunnyAgentsClient | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<VanillaChatInstance | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !containerRef.current) return;
 
-    const clientInstance = new SunnyAgentsClient({
-      websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      idTokenProvider: async () => {
-        const claims = await getIdTokenClaims();
-        return claims?.__raw || null;
-      },
-      tokenExchange: {
-        partnerName: "your-partner-name",
-        audience: "https://api.sunnyhealthai-staging.com",
-        clientId: "your-auth0-client-id",
-      },
-    });
+    const initChat = async () => {
+      chatRef.current = await createSunnyChat({
+        container: containerRef.current!,
+        partnerIdentifier: "acme-health",
+        publicKey: "pk-sunnyagents_abc_xyz",
+        authType: "tokenExchange",
+        idTokenProvider: async () => {
+          const claims = await getIdTokenClaims();
+          return claims?.__raw || null;
+        },
+      });
+    };
 
-    setClient(clientInstance);
+    initChat();
 
     return () => {
-      // Cleanup if needed
+      chatRef.current?.destroy();
     };
   }, [isAuthenticated, getIdTokenClaims]);
 
@@ -142,11 +155,7 @@ export function AuthenticatedChat() {
     return <div>Please log in to use chat</div>;
   }
 
-  if (!client) {
-    return <div>Initializing chat...</div>;
-  }
-
-  return <ChatUI client={client} />;
+  return <div ref={containerRef} />;
 }
 ```
 
@@ -154,7 +163,7 @@ export function AuthenticatedChat() {
 
 ```javascript
 import { createAuth0Client } from "@auth0/auth0-spa-js";
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
 const auth0 = await createAuth0Client({
   domain: "your-domain.auth0.com",
@@ -168,21 +177,15 @@ if (!isAuthenticated) {
   await auth0.loginWithRedirect();
 }
 
-// Get ID token
-const token = await auth0.getIdTokenClaims();
-const idToken = token.__raw;
-
-// Create SDK client
-const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+// Create Sunny Chat with Auth0 token exchange
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
   idTokenProvider: async () => {
     const claims = await auth0.getIdTokenClaims();
     return claims?.__raw || null;
-  },
-  tokenExchange: {
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-auth0-client-id",
   },
 });
 ```
@@ -199,33 +202,39 @@ npm install firebase
 
 ```tsx
 import { getAuth } from "firebase/auth";
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-import { useEffect, useState } from "react";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+import { useEffect, useRef } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
+import type { VanillaChatInstance } from "@sunnyhealthai/agents-sdk";
 
 const auth = getAuth();
 
 export function FirebaseChat() {
   const [user, loading] = useAuthState(auth);
-  const [client, setClient] = useState<SunnyAgentsClient | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<VanillaChatInstance | null>(null);
 
   useEffect(() => {
-    if (!user || loading) return;
+    if (!user || loading || !containerRef.current) return;
 
-    const clientInstance = new SunnyAgentsClient({
-      websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      idTokenProvider: async () => {
-        if (!user) return null;
-        return await user.getIdToken();
-      },
-      tokenExchange: {
-        partnerName: "your-partner-name",
-        audience: "https://api.sunnyhealthai-staging.com",
-        clientId: "your-client-id",
-      },
-    });
+    const initChat = async () => {
+      chatRef.current = await createSunnyChat({
+        container: containerRef.current!,
+        partnerIdentifier: "acme-health",
+        publicKey: "pk-sunnyagents_abc_xyz",
+        authType: "tokenExchange",
+        idTokenProvider: async () => {
+          if (!user) return null;
+          return await user.getIdToken();
+        },
+      });
+    };
 
-    setClient(clientInstance);
+    initChat();
+
+    return () => {
+      chatRef.current?.destroy();
+    };
   }, [user, loading]);
 
   if (loading) {
@@ -236,11 +245,7 @@ export function FirebaseChat() {
     return <div>Please log in</div>;
   }
 
-  if (!client) {
-    return <div>Initializing chat...</div>;
-  }
-
-  return <ChatUI client={client} />;
+  return <div ref={containerRef} />;
 }
 ```
 
@@ -249,19 +254,45 @@ export function FirebaseChat() {
 ### Example with custom token endpoint
 
 ```typescript
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
+  idTokenProvider: async () => {
+    try {
+      // Call your custom auth endpoint
+      const response = await fetch("/api/auth/token", {
+        credentials: "include", // Include cookies
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      return data.idToken;
+    } catch (error) {
+      console.error("Failed to get ID token:", error);
+      return null;
+    }
+  },
+});
+```
+
+**Or use the headless client for custom UIs:**
+
+```typescript
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
 async function getIdToken(): Promise<string | null> {
   try {
-    // Call your custom auth endpoint
     const response = await fetch("/api/auth/token", {
-      credentials: "include", // Include cookies
+      credentials: "include",
     });
-
-    if (!response.ok) {
-      return null;
-    }
-
+    if (!response.ok) return null;
     const data = await response.json();
     return data.idToken;
   } catch (error) {
@@ -271,13 +302,34 @@ async function getIdToken(): Promise<string | null> {
 }
 
 const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   idTokenProvider: getIdToken,
   tokenExchange: {
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
+    organization: "org_xxx",
   },
+});
+```
+
+## Switching auth type at runtime
+
+The `createSunnyChat` API supports switching auth types at runtime using `setAuthType`:
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
+});
+
+// Switch to SAML authentication
+await chat.setAuthType("saml");
+
+// Switch to token exchange with a new provider
+await chat.setAuthType("tokenExchange", {
+  idTokenProvider: async () => getMyToken(),
 });
 ```
 
@@ -330,7 +382,7 @@ try {
 ### Check authentication status
 
 ```typescript
-// Listen for authentication errors
+// Listen for state changes
 client.on("snapshot", (snapshot) => {
   // Check if we have an active conversation
   // If not, authentication may have failed
@@ -344,55 +396,6 @@ client.on("snapshot", (snapshot) => {
 3. **Error handling**: Always handle authentication errors
 4. **Loading states**: Show loading indicators during authentication
 5. **Session management**: Use custom session keys for multi-tenant apps
-
-## Complete example
-
-### React with Auth0
-
-```tsx
-import { useAuth0 } from "@auth0/auth0-react";
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-import { useEffect, useState, useRef } from "react";
-
-export function AuthenticatedChat() {
-  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0();
-  const clientRef = useRef<SunnyAgentsClient | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      loginWithRedirect();
-      return;
-    }
-
-    const initClient = async () => {
-      const client = new SunnyAgentsClient({
-        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-        idTokenProvider: async () => {
-          const claims = await getIdTokenClaims();
-          return claims?.__raw || null;
-        },
-        tokenExchange: {
-          partnerName: "your-partner-name",
-          audience: "https://api.sunnyhealthai-staging.com",
-          clientId: "your-auth0-client-id",
-        },
-      });
-
-      clientRef.current = client;
-      setReady(true);
-    };
-
-    initClient();
-  }, [isAuthenticated, getIdTokenClaims, loginWithRedirect]);
-
-  if (!isAuthenticated || !ready) {
-    return <div>Authenticating...</div>;
-  }
-
-  return <ChatUI client={clientRef.current!} />;
-}
-```
 
 ## Next steps
 

@@ -8,10 +8,10 @@ The messaging capability is at the core of the Sunny Agents SDK. Learn how to se
 
 ## Sending messages
 
-Send a message using the `sendMessage` method:
+Send a message using the `sendMessage` method. It returns the conversation ID used:
 
 ```typescript
-await client.sendMessage("I need to find a primary care doctor near me");
+const { conversationId } = await client.sendMessage("I need to find a primary care doctor near me");
 ```
 
 ### Message options
@@ -186,6 +186,29 @@ Common output item types:
 - **`mcp_approval_request`**: Tool execution approval request
 - **`message`**: Text message content
 - **`artifact`**: Artifact content delivered inline in message text (WebSocket JIT expansion)
+
+### MCP approvals
+
+When the AI needs to execute a tool, it sends an `mcp_approval_request` in the message's `outputItems`. Use `sendMcpApproval` to approve or reject the request:
+
+```typescript
+await client.sendMcpApproval(
+  conversationId,
+  approvalRequestId,  // from mcp_approval_request item
+  true,               // approve
+  "Looks good"        // optional reason
+);
+
+// Reject
+await client.sendMcpApproval(
+  conversationId,
+  approvalRequestId,
+  false,              // reject
+  "Not needed"        // optional reason
+);
+```
+
+See [Key Concepts - MCP Approvals](/concepts#mcp-approvals) for the full flow.
 
 ## Markdown support
 

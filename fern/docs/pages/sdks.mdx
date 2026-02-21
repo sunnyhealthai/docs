@@ -4,7 +4,7 @@ subtitle: Install the Sunny Agents SDK for TypeScript/JavaScript
 slug: sdks
 ---
 
-The Sunny Agents SDK is a TypeScript/JavaScript library that works in both browser and Node.js environments. It provides full type definitions and is designed to work seamlessly with modern JavaScript frameworks.
+The Sunny Agents SDK is a TypeScript/JavaScript library for browser environments. It provides full type definitions and is designed to work seamlessly with modern JavaScript frameworks.
 
 ## Installation
 
@@ -27,11 +27,11 @@ yarn add @sunnyhealthai/agents-sdk
 ## Package Information
 
 - **Package Name**: `@sunnyhealthai/agents-sdk`
-- **Current Version**: `0.0.11`
+- **Current Version**: `0.0.16`
 - **Registry**: [npm](https://www.npmjs.com/package/@sunnyhealthai/agents-sdk)
 - **TypeScript**: Full type definitions included
-- **ESM & CJS**: Supports both ES modules and CommonJS
-- **Browser & Node**: Works in both environments
+- **Module Format**: ES modules (ESM)
+- **Runtime**: Browser (uses DOM APIs)
 
 ## Versioning
 
@@ -49,33 +49,30 @@ The SDK is written in TypeScript and includes comprehensive type definitions. Im
 
 ```typescript
 import {
+  // Core APIs
   SunnyAgentsClient,
   attachSunnyChat,
-  createSunnyChat, // Unified entry point with automatic auth
-  Auth0Provider, // SAML/OIDC authentication
-  PasswordlessAuthManager, // Passwordless email/SMS auth
+  createSunnyChat, // Unified entry point (recommended)
+
+  // Types
   type ConversationState,
   type SunnyAgentMessage,
   type SunnyAgentsConfig,
   type SendMessageOptions,
   type SunnyAgentsClientSnapshot,
+  type UnifiedSunnyChatOptions,
+  type SdkAuthType,
+  type SdkAuthConfig,
+  type VanillaChatOptions,
+  type VanillaChatInstance,
+  type VanillaChatColors,
+
+  // Artifact types
   type ChatArtifact,
   type DoctorProfileArtifact,
   type ProviderSearchResultsArtifact,
   type ProviderResult,
   type LocationResult,
-  type VanillaChatOptions,
-  type VanillaChatInstance,
-  type VanillaChatColors,
-  type UnifiedSunnyChatOptions,
-  type AuthConfig,
-  type SamlOidcAuthConfig,
-  type TokenExchangeAuthConfig,
-  type Auth0ProviderConfig,
-  type PasswordlessAuthConfig,
-  type PasswordlessStartOptions,
-  type PasswordlessVerifyOptions,
-  type PopupOptions,
 } from "@sunnyhealthai/agents-sdk";
 ```
 
@@ -93,23 +90,19 @@ The SDK is framework-agnostic and works with:
 
 ### Unified Entry Point (Recommended)
 
-The `createSunnyChat` function provides the simplest way to set up chat with automatic authentication handling:
+The `createSunnyChat` function provides the simplest way to set up chat with automatic authentication handling. You provide three required parameters and the server handles all auth configuration:
 
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-// SAML/OIDC authentication (auto-login)
-const { client, destroy } = await createSunnyChat({
+const chat = await createSunnyChat({
   container: document.getElementById("chat"),
-  auth: {
-    type: "saml",
-    domain: "your-tenant.auth0.com",
-    clientId: "your-client-id",
-    connection: "guardian-saml", // Auto-login enabled
-    audience: "https://api.sunnyhealthai-staging.com",
-  },
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "saml", // or "oidc", "passwordless", "tokenExchange"
 });
-// Use client for programmatic access; call destroy() to clean up
+// Use chat.client for programmatic access; call chat.destroy() to clean up
+// Switch auth type at runtime: chat.setAuthType("oidc")
 ```
 
 ### Headless Client
@@ -119,19 +112,18 @@ For custom UI implementations:
 ```typescript
 import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
 
-const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-});
+// websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
+const client = new SunnyAgentsClient();
 ```
 
 ### Vanilla Widget
 
-For quick integration with a pre-built UI:
+For quick integration with a pre-built UI and manual configuration:
 
 ```typescript
 import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-attachSunnyChat({
+const { client, destroy } = attachSunnyChat({
   container: document.getElementById("chat"),
   config: {
     websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
@@ -143,7 +135,7 @@ attachSunnyChat({
 
 - **[Quickstart Guide](/quickstart)** - Get up and running in minutes
 - **[Overview](/overview)** - Learn about SDK capabilities
-- **[API Reference](/api-reference)** - Complete documentation
+- **[API Reference](/api-reference)** - REST token exchange endpoint and WebSocket message schemas (Conversation, Message, Artifacts). SDK method docs are in the guides above.
 
 ## Support
 

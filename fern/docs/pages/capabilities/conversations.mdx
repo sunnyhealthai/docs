@@ -34,6 +34,14 @@ Set a title when creating:
 const conversationId = await client.createConversation("Customer Support Chat");
 ```
 
+### With pre-set ID
+
+You can also provide your own conversation ID (useful for restoring conversations from storage):
+
+```typescript
+const conversationId = await client.createConversation("My Chat", "my-custom-id");
+```
+
 ## Managing multiple conversations
 
 The SDK supports multiple concurrent conversations:
@@ -113,6 +121,7 @@ const client = new SunnyAgentsClient({
     partnerName: "your-partner-name",
     audience: "https://api.sunnyhealthai-staging.com",
     clientId: "your-client-id",
+    organization: "org_xxx",
   },
   createServerConversations: true, // Default when authenticated
 });
@@ -133,7 +142,6 @@ For anonymous mode, conversations are stored locally:
 
 ```typescript
 const client = new SunnyAgentsClient({
-  websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
   createServerConversations: false, // Local-only
 });
 
@@ -181,9 +189,7 @@ For anonymous mode, you can pass a `conversationId` to use a specific conversati
 ```typescript
 attachSunnyChat({
   container: document.getElementById("chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   anonymous: true,
   conversationId: savedId, // Pre-seed with ID from your storage
 });

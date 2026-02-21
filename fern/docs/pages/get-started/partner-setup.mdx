@@ -1,0 +1,61 @@
+---
+title: Partner Setup
+subtitle: Get credentials and configure SDK authentication in Sunny Central
+slug: partner-setup
+---
+
+Before integrating the SDK, you need a **public key** and **partner identifier**. These are obtained from **Sunny Central**, the partner portal where you manage API keys, authentication, and allowed domains.
+
+## What is Sunny Central?
+
+Sunny Central is the partner portal for configuring your Sunny Agents integration. It provides:
+
+- **API keys** — Create and revoke public keys (`pk-sunnyagents_...`) for your app
+- **Partner name** — Your unique partner identifier used as `partnerIdentifier` in the SDK
+- **SDK auth configuration** — Auth0 domain, client ID, token exchange URL for SAML/OIDC and token exchange
+- **Allowed domains** — CORS origins where your app can embed the chat (required for passwordless)
+- **CTE profiles** — Custom Token Exchange configuration for partner-specific auth flows
+
+## Access Sunny Central
+
+Sign in to the partner portal:
+
+- **Staging**: [https://platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com)
+- **Production**: [https://platform.sunnyhealthai.com](https://platform.sunnyhealthai.com)
+
+If you don't have access, contact your Sunny Health representative.
+
+## Get your credentials
+
+### 1. Create an API key
+
+In **Developer Tools** → **API Keys**, create a new public API key. Copy the key value (e.g. `pk-sunnyagents_abc_xyz`). This is your `publicKey` for the SDK.
+
+### 2. Get your partner identifier
+
+Your partner name is shown in the SDK snippets section of Developer Tools. Use it as `partnerIdentifier` when calling `createSunnyChat`:
+
+```typescript
+partnerIdentifier: "your-partner-name",  // from Sunny Central
+publicKey: "pk-sunnyagents_abc_xyz",    // from API Keys
+```
+
+### 3. Configure authentication
+
+The auth type you can use depends on your Sunny Central configuration:
+
+| Auth type | Prerequisites |
+|-----------|----------------|
+| **Passwordless** | API key created + at least one allowed domain configured |
+| **Token exchange** | Your org must have token exchange configured in Sunny Central. The SDK fetches these params from the server—you only provide `idTokenProvider`. |
+| **SAML/OIDC** | Your org must have SAML/OIDC configured in Sunny Central. The SDK fetches all auth params from the server automatically. |
+
+- **Allowed domains**: Add your app's origins (e.g. `https://myapp.com`) in **Developer Tools** → **Allowed Domains**. Required for passwordless auth.
+- **Token exchange and SAML/OIDC**: Contact your Sunny Health representative to configure these in Sunny Central. Once configured, the SDK fetches everything remotely—no params to pass in code.
+
+## Next steps
+
+Once you have your credentials:
+
+1. **[Quickstart](/quickstart)** — Integrate the SDK with `createSunnyChat`
+2. **[Authentication](/authentication)** — Learn about auth modes in detail

@@ -34,6 +34,9 @@ navigation:
           - page: Overview
             path: docs/pages/get-started/overview.mdx
             icon: fa-duotone fa-book-open
+          - page: Partner Setup
+            path: docs/pages/get-started/partner-setup.mdx
+            icon: fa-duotone fa-key
           - page: Quickstart
             path: docs/pages/get-started/quickstart.mdx
             icon: fa-duotone fa-rocket

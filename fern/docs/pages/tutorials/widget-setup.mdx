@@ -18,7 +18,36 @@ npm install @sunnyhealthai/agents-sdk
 
 Create an HTML file and add a container:
 
-**Option A: Simple anonymous widget**
+**Option A: Unified API with automatic authentication (Recommended)**
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Healthcare Concierge</title>
+</head>
+<body>
+  <h1>Find Care</h1>
+  
+  <!-- Container for the chat widget -->
+  <div id="sunny-chat"></div>
+  
+  <script type="module">
+    import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+    
+    // Automatically handles authentication and server configuration
+    const chat = await createSunnyChat({
+      container: document.getElementById("sunny-chat"),
+      partnerIdentifier: "acme-health",
+      publicKey: "pk-sunnyagents_abc_xyz",
+      authType: "passwordless",
+    });
+  </script>
+</body>
+</html>
+```
+
+**Option B: Low-level widget with manual configuration**
 
 ```html
 <!DOCTYPE html>
@@ -46,38 +75,9 @@ Create an HTML file and add a container:
 </html>
 ```
 
-**Option B: Unified API with automatic authentication (Recommended)**
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Healthcare Concierge</title>
-</head>
-<body>
-  <h1>Find Care</h1>
-  
-  <!-- Container for the chat widget -->
-  <div id="sunny-chat"></div>
-  
-  <script type="module">
-    import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-    
-    // Automatically handles SAML/OIDC authentication
-    createSunnyChat({
-      container: document.getElementById("sunny-chat"),
-      auth: {
-        type: "saml",
-        domain: "your-tenant.auth0.com",
-        clientId: "your-client-id",
-        connection: "guardian-saml",
-        audience: "https://api.sunnyhealthai-staging.com",
-      },
-    });
-  </script>
-</body>
-</html>
-```
+<Tip>
+  **Anonymous mode only:** The minimal `attachSunnyChat` example above works for anonymous/local development only. It does not send `sdk.session.create` and cannot use server-driven auth. For production or authenticated use, use `createSunnyChat` with `partnerIdentifier`, `publicKey`, and `authType` from [Sunny Central](/partner-setup).
+</Tip>
 
 That's it! The widget is now integrated and ready to use.
 
@@ -85,23 +85,27 @@ That's it! The widget is now integrated and ready to use.
 
 ### Basic configuration
 
+For anonymous/local-only conversations (no server persistence or auth):
+
 ```typescript
+import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
+
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
+    // websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
   },
 });
 ```
+
+For production or authenticated sessions, use `createSunnyChat` instead (see [Authenticated mode](#authenticated-mode) below).
 
 ### Custom header title
 
 ```typescript
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   headerTitle: "Sunny Health Concierge",
 });
 ```
@@ -111,9 +115,7 @@ attachSunnyChat({
 ```typescript
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   placeholder: "How can I help you find care?",
 });
 ```
@@ -125,9 +127,7 @@ For local-only conversations:
 ```typescript
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   anonymous: true,
 });
 ```
@@ -141,15 +141,11 @@ For production with user authentication, use the unified `createSunnyChat` API:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const { client, destroy } = await createSunnyChat({
+const chat = await createSunnyChat({
   container: document.getElementById("sunny-chat"),
-  auth: {
-    type: "saml",
-    domain: "your-tenant.auth0.com",
-    clientId: "your-client-id",
-    connection: "guardian-saml", // Auto-login enabled
-    audience: "https://api.sunnyhealthai-staging.com",
-  },
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "saml", // or "oidc"
 });
 ```
 
@@ -158,27 +154,23 @@ const { client, destroy } = await createSunnyChat({
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const { client, destroy } = await createSunnyChat({
+const chat = await createSunnyChat({
   container: document.getElementById("sunny-chat"),
-  auth: {
-    type: "tokenExchange",
-    idTokenProvider: async () => {
-      return localStorage.getItem("id_token");
-    },
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-client-id",
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
+  idTokenProvider: async () => {
+    return localStorage.getItem("id_token");
   },
 });
 ```
 
-**Or use attachSunnyChat with manual configuration:**
+**Or use attachSunnyChat with manual token exchange configuration:**
 
 ```typescript
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
   config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
     idTokenProvider: async () => {
       return localStorage.getItem("id_token");
     },
@@ -186,6 +178,7 @@ attachSunnyChat({
       partnerName: "your-partner-name",
       audience: "https://api.sunnyhealthai-staging.com",
       clientId: "your-client-id",
+      organization: "org_xxx",
     },
   },
 });
@@ -200,9 +193,7 @@ Customize the widget's appearance:
 ```typescript
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   colors: {
     primary: "#006fff",    // User messages, send button
     secondary: "#212124",    // Text color
@@ -218,9 +209,7 @@ For anonymous mode, you can pass a `conversationId` to use a specific conversati
 ```typescript
 attachSunnyChat({
   container: document.getElementById("sunny-chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   anonymous: true,
   conversationId: "your-saved-conversation-id",
 });
@@ -233,9 +222,7 @@ The widget returns a client instance that you can use:
 ```typescript
 const { client, destroy } = attachSunnyChat({
   container: document.getElementById("sunny-chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
 });
 
 // Listen to events
@@ -267,9 +254,7 @@ export function ChatWidget() {
 
     instanceRef.current = attachSunnyChat({
       container: containerRef.current,
-      config: {
-        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      },
+      config: {},
     });
 
     return () => {
@@ -299,9 +284,7 @@ onMounted(() => {
   if (chatContainer.value) {
     chatInstance = attachSunnyChat({
       container: chatContainer.value,
-      config: {
-        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      },
+      config: {},
     });
   }
 });
@@ -322,9 +305,7 @@ const container = document.getElementById("sunny-chat");
 
 const { client, destroy } = attachSunnyChat({
   container,
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
+  config: {},
   headerTitle: "Support Chat",
   placeholder: "How can we help?",
 });

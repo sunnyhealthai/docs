@@ -1,0 +1,81 @@
+---
+title: February 10, 2026
+slug: 02-10-2026
+tags: ["authentication", "createSunnyChat", "breaking-change", "v0.0.14"]
+---
+
+## Breaking changes
+
+### Server-driven auth configuration for `createSunnyChat`
+
+The `createSunnyChat` API now uses **server-driven authentication configuration**. Instead of passing Auth0 details (domain, clientId, connection) directly, you provide three required parameters and the server supplies all auth configuration automatically via `sdk.session.create`.
+
+**Before (v0.0.11):**
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  auth: {
+    type: "saml",
+    domain: "your-tenant.auth0.com",
+    clientId: "your-client-id",
+    connection: "guardian-saml",
+    audience: "https://api.sunnyhealthai-staging.com",
+  },
+});
+```
+
+**After (v0.0.14):**
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "saml",
+});
+```
+
+**Migration:**
+- Replace `auth.type` with top-level `authType`
+- Add `partnerIdentifier` and `publicKey` (provided by Sunny Health)
+- Remove all Auth0 configuration fields (`domain`, `clientId`, `connection`, `audience`, `organization`) -- these are now provided by the server
+- For `tokenExchange`, move `idTokenProvider` to a top-level option
+- The `auth` object is no longer accepted
+
+### Removed types
+
+The following types have been removed:
+- `AuthConfig`
+- `SamlOidcAuthConfig`
+- `TokenExchangeAuthConfig`
+
+**Replaced by:**
+- `UnifiedSunnyChatOptions` -- configuration for `createSunnyChat`
+- `SdkAuthType` -- `'passwordless' | 'saml' | 'oidc' | 'tokenExchange'`
+- `SdkAuthConfig` -- server-provided auth configuration (read-only)
+
+## New features
+
+### Runtime auth type switching
+
+`createSunnyChat` now returns a `VanillaChatInstance` with a `setAuthType` method for switching authentication types at runtime:
+
+```typescript
+const chat = await createSunnyChat({ /* ... */ });
+await chat.setAuthType("saml");
+await chat.setAuthType("tokenExchange", {
+  idTokenProvider: async () => getMyToken(),
+});
+```
+
+### Token exchange `organization` field
+
+The `tokenExchange` configuration now includes a required `organization` field for Auth0 organization support.
+
+## Enhancements
+
+- Default WebSocket URL is `wss://chat.api.sunnyhealthai-staging.com` (no need to specify explicitly)
+- `SunnyAgentsClient` can be instantiated with no arguments for quick setup
+- `sendMessage` now returns `{ conversationId: string }` for tracking
+- `createConversation` now accepts an optional `conversationId` parameter
