@@ -33,6 +33,9 @@ navigation:
           - page: Authentication
             path: ../docs/pages/capabilities/authentication.mdx
             icon: fa-duotone fa-lock
+          - page: Profile Sync
+            path: ../docs/pages/capabilities/profile-sync.mdx
+            icon: fa-duotone fa-arrows-rotate
           - page: Artifacts
             path: ../docs/pages/capabilities/artifacts.mdx
             icon: fa-duotone fa-box

@@ -140,6 +140,7 @@ interface UnifiedSunnyChatOptions {
   publicKey: string;                   // Required: API key (pk-sunnyagents_...)
   authType: SdkAuthType;               // Required: "passwordless" | "saml" | "oidc" | "tokenExchange"
   idTokenProvider?: () => Promise<string | null>; // Required for tokenExchange
+  authUpgradeProfileSync?: AuthUpgradeProfileSyncData | (() => Promise<...>); // Pre-populate user data
   websocketUrl?: string;               // Override WebSocket URL (default: wss://chat.api.sunnyhealthai-staging.com)
   headerTitle?: string;                // Chat header title (default: "Sunny Agents")
   placeholder?: string;                // Input placeholder (default: "Ask anything...")
@@ -344,6 +345,31 @@ idTokenProvider: async () => {
 }
 ```
 
+## Profile sync
+
+You can pre-populate user data (profile, address, insurance, and dependents) during authentication by passing `authUpgradeProfileSync` to `createSunnyChat`. This data is sent alongside the `auth.upgrade` message, so the user doesn't need to re-enter information your application already has.
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "tokenExchange",
+  idTokenProvider: async () => getMyToken(),
+  authUpgradeProfileSync: {
+    user_profile: { first_name: "Jane", last_name: "Doe" },
+    user_address: {
+      address_line_1: "123 Main St",
+      city: "San Francisco",
+      state: "CA",
+      zip_code: "94102",
+    },
+  },
+});
+```
+
+See the **[Profile Sync](/profile-sync)** guide for full details on all supported data types including insurance and dependents.
+
 ## Best practices
 
 1. **Secure storage**: Store ID tokens securely (not in localStorage for sensitive apps)
@@ -352,6 +378,7 @@ idTokenProvider: async () => {
 
 ## Next steps
 
+- **[Profile Sync](/profile-sync)** - Pre-populate user data during authentication
 - **[Key Concepts](/concepts)** - Understand events, state management, and MCP approvals
 - **[Artifacts](/artifacts)** - Parse and render rich content
 - **[Overview](/overview)** - Understand SDK architecture

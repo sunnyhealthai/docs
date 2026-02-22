@@ -669,6 +669,12 @@ components:
           description: Optional insurance records (SDK partner pre-collected data).
           items:
             $ref: "#/components/schemas/AuthUpgradeInsurance"
+        dependents:
+          type: array
+          nullable: true
+          description: Optional dependent records (SDK partner pre-collected data).
+          items:
+            $ref: "#/components/schemas/AuthUpgradeDependent"
 
     PasswordlessStartPayload:
       type: object
@@ -800,7 +806,8 @@ components:
           description: |
             Error codes: `INVALID_TOKEN`, `ALREADY_AUTHENTICATED`,
             `SESSION_UPDATE_FAILED`, `PROFILE_SAVE_FAILED`,
-            `ADDRESS_SAVE_FAILED`, `INSURANCE_SAVE_FAILED`, `PARTNER_REQUIRED`.
+            `ADDRESS_SAVE_FAILED`, `INSURANCE_SAVE_FAILED`,
+            `DEPENDENT_SAVE_FAILED`, `PARTNER_REQUIRED`.
 
     PasswordlessOtpSentPayload:
       type: object
@@ -1199,6 +1206,33 @@ components:
           type: string
         group_id:
           type: string
+
+    AuthUpgradeDependent:
+      type: object
+      required: [first_name, last_name, date_of_birth, relationship_code]
+      description: Dependent record sent with auth.upgrade (SDK partner pre-collected data).
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          description: Date of birth in YYYY-MM-DD format.
+        gender:
+          type: string
+          nullable: true
+        relationship_code:
+          type: string
+          description: "Stedi relationship code (e.g., `01` = spouse, `19` = child)."
+        member_id:
+          type: string
+          nullable: true
+          description: Member ID for this dependent (if different from subscriber).
+        insurance_index:
+          type: integer
+          nullable: true
+          description: Index into the `insurances` array to link to a specific plan. If omitted, defaults to the first plan.
 
     SdkAuthConfig:
       type: object
