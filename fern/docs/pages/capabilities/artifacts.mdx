@@ -19,7 +19,7 @@ Artifacts are structured data objects that provide additional context or informa
 
 Artifacts are **not fetched via REST API**. The WebSocket backend expands artifact tags just-in-time (JIT) during streaming. When the AI references an artifact, the backend replaces the tag with the full artifact JSON and embeds it directly in `message.text`.
 
-You receive artifact content **inline**—no separate fetch is needed. The message text contains embedded JSON objects with `item_type`, `item_content`, and `created_at`.
+You receive artifact content **inline**--no separate fetch is needed. The message text contains embedded JSON objects with `item_type`, `item_content`, and `created_at`.
 
 ## Parsing embedded artifacts
 
@@ -74,9 +74,9 @@ The inline JSON format embedded in message text:
 
 ```typescript
 interface InlineArtifact<T = unknown> {
-  item_type: string;    // Type identifier (e.g., "doctor_profile")
-  item_content: T;      // Typed content
-  created_at?: string;  // ISO timestamp (optional)
+  item_type: string;
+  item_content: T;
+  created_at?: string;
 }
 ```
 
@@ -86,7 +86,7 @@ Doctor profiles are a common artifact type:
 
 ```typescript
 interface DoctorProfileArtifact {
-  npi: string; // National Provider Identifier
+  npi: string;
   first_name?: string;
   last_name?: string;
   title?: string;
@@ -176,53 +176,26 @@ artifacts.forEach(({ item_type, item_content }) => {
 });
 ```
 
-## Rendering artifacts in UI
+## Rendering artifacts
 
-### Vanilla widget
-
-The vanilla widget automatically parses and renders doctor profiles and provider search results from message text:
+The `createSunnyChat` widget automatically parses and renders doctor profiles and provider search results from message text:
 
 ```typescript
-attachSunnyChat({
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+
+const chat = await createSunnyChat({
   container: document.getElementById("chat"),
-  // ... config
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
 });
-
-// Doctor profiles and provider search results are automatically rendered when embedded in messages
 ```
 
-### Custom UI
-
-Parse message text and render artifacts in your custom UI:
-
-```typescript
-function renderMessage(message: SunnyAgentMessage) {
-  const artifacts = parseEmbeddedArtifacts(message.text);
-
-  return (
-    <div>
-      <p>{message.text}</p>
-      {artifacts.map((artifact, idx) => (
-        <ArtifactRenderer key={idx} artifact={artifact} />
-      ))}
-    </div>
-  );
-}
-
-function ArtifactRenderer({ artifact }: { artifact: { item_type: string; item_content: unknown } }) {
-  if (artifact.item_type === "doctor_profile") {
-    return renderDoctorProfile(artifact.item_content as DoctorProfileArtifact);
-  }
-  if (artifact.item_type === "provider_search_results") {
-    return renderProviderSearchResults(artifact.item_content as ProviderSearchResultsArtifact);
-  }
-  return renderGenericArtifact(artifact.item_content);
-}
-```
+Doctor profiles and provider search results are automatically rendered when embedded in messages.
 
 ## Embedded artifact format
 
-Message text contains JSON blobs—no `{art_tag}` tags are visible to the client. The backend expands `{art_tag}uuid{/art_tag}` server-side before streaming. What you receive looks like:
+Message text contains JSON blobs--no `{art_tag}` tags are visible to the client. The backend expands `{art_tag}uuid{/art_tag}` server-side before streaming. What you receive looks like:
 
 ```
 Here's a doctor who might work for you: {"item_type":"doctor_profile","item_content":{"npi":"1234567890","first_name":"Jane","last_name":"Smith","specialty":"Cardiology","rating":4.8,"review_count":150},"created_at":"2025-01-15T12:00:00Z"}
@@ -250,52 +223,10 @@ try {
 1. **Parse defensively**: Wrap JSON.parse in try/catch; skip invalid objects
 2. **Type safety**: Use TypeScript assertions or guards for `item_content` by `item_type`
 3. **Fallback UI**: Provide fallback when an artifact fails to parse
-4. **No loading states**: Artifacts arrive with the message—no fetch loading needed
-
-## Examples
-
-### Display doctor profile from message
-
-```typescript
-function DoctorProfileFromMessage({ message }: { message: SunnyAgentMessage }) {
-  const artifacts = parseEmbeddedArtifacts(message.text);
-  const doctorProfile = artifacts.find(a => a.item_type === "doctor_profile");
-
-  if (!doctorProfile) return null;
-
-  const profile = doctorProfile.item_content as DoctorProfileArtifact;
-  return (
-    <div className="doctor-profile">
-      <h3>{profile.first_name} {profile.last_name}</h3>
-      <p>Specialty: {profile.specialty}</p>
-      {profile.rating && (
-        <p>Rating: {profile.rating} ({profile.review_count} reviews)</p>
-      )}
-      <p>NPI: {profile.npi}</p>
-    </div>
-  );
-}
-```
-
-### Parse and render all artifacts in a message
-
-```typescript
-function MessageWithArtifacts({ message }: { message: SunnyAgentMessage }) {
-  const artifacts = parseEmbeddedArtifacts(message.text);
-
-  return (
-    <div>
-      <MarkdownText text={message.text} />
-      {artifacts.map((artifact, i) => (
-        <ArtifactCard key={i} artifact={artifact} />
-      ))}
-    </div>
-  );
-}
-```
+4. **No loading states**: Artifacts arrive with the message--no fetch loading needed
 
 ## Next steps
 
-- **[Messaging](/messaging)** - Learn about message handling
-- **[Custom UI Tutorial](/custom-ui)** - Build artifact rendering UI
+- **[Key Concepts](/concepts)** - Understand events, state management, and MCP approvals
+- **[Authentication](/authentication)** - Set up authenticated sessions
 - **[API Reference](/api-reference)** - WebSocket schemas and artifact type definitions

@@ -4,7 +4,7 @@ subtitle: Build healthcare concierge experiences with AI-powered chat
 slug: welcome
 ---
 
-The Sunny Agents SDK is a TypeScript/JavaScript library designed specifically for building healthcare applications. Embed AI-powered chat experiences that help patients find providers, book appointments, get health information, and navigate care—all in real-time. Whether you need a drop-in widget or want to build a custom UI, the SDK provides everything you need for secure, streaming healthcare conversations.
+The Sunny Agents SDK is a TypeScript/JavaScript library designed specifically for building healthcare applications. Embed AI-powered chat experiences that help patients find providers, book appointments, get health information, and navigate care—all in real-time.
 
 ## Quick links
 
@@ -15,11 +15,11 @@ The Sunny Agents SDK is a TypeScript/JavaScript library designed specifically fo
   <Card title="Quickstart" icon="duotone rocket" href="/quickstart">
     Get up and running in minutes
   </Card>
-  <Card title="Tutorials" icon="duotone book-sparkles" href="/widget-setup">
-    Step-by-step integration guides
+  <Card title="Authentication" icon="duotone lock" href="/authentication">
+    Set up authenticated sessions
   </Card>
   <Card title="API Reference" icon="duotone code" href="/api-reference">
-    REST token exchange, WebSocket schemas, and message types
+    REST and WebSocket API schemas
   </Card>
 </CardGroup>
 
@@ -64,11 +64,9 @@ pnpm add @sunnyhealthai/agents-sdk
 yarn add @sunnyhealthai/agents-sdk
 ```
 
-## Three ways to integrate
+## Integration
 
-### Option 1: Unified API (Recommended)
-
-The simplest way to get started with automatic authentication and server-driven configuration:
+Use `createSunnyChat` to embed a fully-featured chat widget with automatic authentication and server-driven configuration:
 
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
@@ -77,35 +75,14 @@ const chat = await createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "passwordless",
+  authType: "passwordless", // or "saml", "oidc", "tokenExchange"
 });
-```
 
-### Option 2: Drop-in Widget
+// Access the client for programmatic control
+chat.client.on("snapshot", (snapshot) => { /* ... */ });
 
-A lower-level widget for manual configuration:
-
-```typescript
-import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-attachSunnyChat({
-  container: document.getElementById("chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
-});
-```
-
-### Option 3: Headless Client
-
-Build a custom UI with full control:
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-const client = new SunnyAgentsClient();
-
-await client.sendMessage("I need to find a cardiologist near me");
+// Clean up when done
+chat.destroy();
 ```
 
 ## Get support

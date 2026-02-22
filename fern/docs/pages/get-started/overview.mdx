@@ -4,7 +4,7 @@ subtitle: Everything you need to know about the Sunny Agents SDK
 slug: overview
 ---
 
-The Sunny Agents SDK is a TypeScript/JavaScript library that enables you to embed AI-powered chat experiences into any web application. It provides both a headless client for custom UI implementations and a ready-to-use vanilla JavaScript widget for quick integration.
+The Sunny Agents SDK is a TypeScript/JavaScript library that enables you to embed AI-powered chat experiences into any web application. Use `createSunnyChat` to drop in a fully-featured chat widget with automatic authentication and server-driven configuration.
 
 ## What you can build
 
@@ -27,20 +27,18 @@ The SDK is designed specifically for healthcare applications:
 
 ## Core capabilities
 
-The SDK is organized around four main capabilities:
-
 <CardGroup cols={2}>
-  <Card title="Messaging" icon="duotone message" href="/messaging">
-    Send messages and receive streaming responses in real-time. Support file attachments, markdown rendering, and rich content formatting. Handle message events and streaming updates with ease.
-  </Card>
-  <Card title="Conversations" icon="duotone comments" href="/conversations">
-    Manage multiple conversations with state persistence. Create, switch between, and manage conversation history. Support both server-persisted and local-only conversations.
-  </Card>
   <Card title="Authentication" icon="duotone lock" href="/authentication">
-    Multiple authentication methods: SAML/OIDC via Auth0, custom token exchange, passwordless email/SMS, and anonymous mode. Automatic token management and refresh.
+    Multiple authentication methods: SAML/OIDC via Auth0, custom token exchange, and passwordless email/SMS. Automatic token management and refresh.
   </Card>
   <Card title="Artifacts" icon="duotone box" href="/artifacts">
     Rich content delivered inline in messages via WebSocket. Parse embedded JSON for doctor profiles and structured data.
+  </Card>
+  <Card title="Key Concepts" icon="duotone lightbulb" href="/concepts">
+    Conversations, messages, events, MCP approvals, file attachments, and state management.
+  </Card>
+  <Card title="API Reference" icon="duotone code" href="/api-reference">
+    REST and WebSocket API schemas and message types.
   </Card>
 </CardGroup>
 
@@ -50,40 +48,34 @@ The SDK is organized around four main capabilities:
 
 ## How it works
 
-The SDK connects to Sunny Agents services via WebSocket for real-time messaging. When you send a message, the SDK establishes a WebSocket connection (if not already connected), sends your message, and streams the response back in real-time. For authenticated sessions, the SDK handles token exchange automatically.
+`createSunnyChat` fetches your partner's auth configuration from the server via the [`/sdk/config`](/api-reference/authentication/get-sdk-config) endpoint, activates the chosen authentication mode, and renders a chat widget in your container. The WebSocket connection is established when the user sends their first message.
 
 <Accordion title="Architecture diagram">
 ```mermaid
 graph TD
-    A[Your Application] --> B[Sunny Agents SDK]
-    B --> C[WebSocket Connection]
-    C --> D[sdk.session.create]
-    D --> E[Server Auth Config]
-    
-    E --> F{Auth Type}
-    F -->|SAML/OIDC| G[Auth0 Popup]
-    F -->|Token Exchange| H[Exchange ID Token]
-    F -->|Passwordless| I[Email/SMS OTP]
-    F -->|Anonymous| J[No Auth]
-    
-    G --> K[auth.upgrade]
-    H --> K
-    I --> K
-    J --> L[Send Message]
-    K --> M[auth.upgraded]
-    M --> L
-    
-    L --> N[Stream Response]
-    N --> O[Update UI]
-    O --> P[Handle Events]
+    A[Your Application] --> B["createSunnyChat()"]
+    B --> C["GET /sdk/config"]
+    C --> D[Server Auth Config]
+
+    D --> E{Auth Type}
+    E -->|SAML/OIDC| F[Auth0 Popup]
+    E -->|Token Exchange| G[Exchange ID Token]
+    E -->|Passwordless| H[Email/SMS OTP]
+
+    F --> I[User Sends Message]
+    G --> I
+    H --> I
+
+    I --> J[WebSocket Connect + auth.upgrade]
+    J --> K[auth.upgraded]
+    K --> L[Stream Response]
+    L --> M[Update UI]
 ```
 </Accordion>
 
-## Three integration approaches
+## Getting started
 
-### Unified API (Recommended)
-
-Simplest way to get started. Provide your partner identifier, public key, and auth type -- all authentication configuration is handled automatically by the server:
+Provide your partner identifier, public key, and auth type -- all authentication configuration is handled automatically by the server:
 
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
@@ -95,67 +87,22 @@ const chat = await createSunnyChat({
   authType: "saml", // or "passwordless", "oidc", "tokenExchange"
 });
 
-// Access the client for programmatic control
-chat.client.on("snapshot", (snapshot) => { /* ... */ });
+// Access the underlying client for programmatic control
+chat.client.on("snapshot", (snapshot) => { /* update your UI */ });
+
 // Clean up when done
 chat.destroy();
 ```
 
-### Headless Client
-
-Build a completely custom UI with full control:
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-// websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
-const client = new SunnyAgentsClient();
-
-// Listen to events
-client.on("snapshot", (snapshot) => {
-  // Update your UI
-});
-
-// Send messages
-await client.sendMessage("I need to find a primary care doctor");
-```
-
-### Vanilla Widget
-
-Drop-in chat widget for quick integration with manual configuration:
-
-```typescript
-import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-const { client, destroy } = attachSunnyChat({
-  container: document.getElementById("chat"),
-  config: {
-    websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-  },
-});
-```
-
-## Framework compatibility
-
-The SDK is framework-agnostic and works with:
-
-- **React** - Use the headless client with hooks
-- **Vue** - Integrate with Vue's reactivity system
-- **Angular** - Use with Angular services and components
-- **Vanilla JavaScript** - Use directly or with the widget
-- **Any framework** - The headless client works everywhere
-
 ## Authentication modes
 
-The SDK supports four authentication methods. With `createSunnyChat`, you simply specify the `authType` and the SDK handles everything else using server-provided configuration:
+The SDK supports three authentication methods. You specify the `authType` and the SDK handles everything else using server-provided configuration:
 
 ### SAML/OIDC Authentication (Recommended for Enterprise)
 
 Automatic authentication via Auth0 with SAML or OIDC. The SDK triggers a popup login automatically:
 
 ```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
 const chat = await createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
@@ -169,15 +116,12 @@ const chat = await createSunnyChat({
 For applications with their own authentication (Auth0, Firebase, custom providers):
 
 ```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
 const chat = await createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
   authType: "tokenExchange",
   idTokenProvider: async () => {
-    // Return an ID token from your auth provider
     return localStorage.getItem("id_token");
   },
 });
@@ -188,25 +132,11 @@ const chat = await createSunnyChat({
 Email or SMS-based authentication without passwords. The SDK renders a verification UI in the chat automatically:
 
 ```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
 const chat = await createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
   authType: "passwordless",
-});
-```
-
-### Anonymous Mode
-
-For local-only conversations without server persistence, use the headless client directly:
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-const client = new SunnyAgentsClient({
-  createServerConversations: false,
 });
 ```
 
@@ -220,6 +150,15 @@ const client = new SunnyAgentsClient({
 - **File attachments** - Send files as base64-encoded attachments
 - **Automatic reconnection** - WebSocket connections automatically reconnect on failure
 - **Token management** - Automatic token refresh and caching
+
+## Framework compatibility
+
+The SDK is framework-agnostic and works with:
+
+- **React** - Mount `createSunnyChat` in a `useEffect` hook
+- **Vue** - Mount in `onMounted` lifecycle
+- **Angular** - Use with Angular services and components
+- **Vanilla JavaScript** - Use directly in any web page
 
 ## Installation
 
@@ -238,10 +177,10 @@ yarn add @sunnyhealthai/agents-sdk
     Get up and running in minutes
   </Card>
   <Card title="API reference" icon="duotone code" href="/api-reference">
-    REST token exchange, WebSocket schemas, and message types
+    REST and WebSocket API schemas
   </Card>
-  <Card title="Tutorials" icon="duotone book-sparkles" href="/widget-setup">
-    Step-by-step integration guides
+  <Card title="Authentication" icon="duotone lock" href="/authentication">
+    Authentication modes and setup
   </Card>
   <Card title="Concepts" icon="duotone lightbulb" href="/concepts">
     Learn core concepts and patterns

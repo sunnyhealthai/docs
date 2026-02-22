@@ -16,7 +16,7 @@ The SDK connects to different endpoints depending on your environment:
 | **Staging** | `wss://chat.api.sunnyhealthai-staging.com` | [platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com) |
 | **Production** | `wss://chat.api.sunnyhealthai.com` | [platform.sunnyhealthai.com](https://platform.sunnyhealthai.com) |
 
-The default `websocketUrl` is the staging URL. Override it for production when appropriate. Use the same environment for Sunny Central and the WebSocket URL (staging credentials with staging chat, production with production).
+The default `websocketUrl` is the staging URL. Override it for production via the `websocketUrl` option in `createSunnyChat`. Use the same environment for Sunny Central and the WebSocket URL (staging credentials with staging chat, production with production).
 
 ## Conversations
 
@@ -27,9 +27,7 @@ A **conversation** is a collection of messages between a patient (or healthcare 
 - **Messages**: Array of messages in chronological order
 - **Quick Responses**: Optional suggested responses for the user
 
-Conversations can be:
-- **Server-persisted**: Created and stored on the server (requires authentication)
-- **Local-only**: Stored only in the client's memory (anonymous mode)
+When authenticated via `createSunnyChat`, conversations are automatically persisted on the server.
 
 ```typescript
 interface ConversationState {
@@ -77,11 +75,11 @@ interface SunnyAgentMessage {
 - **Doctor Profiles**: Healthcare provider information with NPI, specialty, ratings, etc.
 - **Structured Data**: Custom data objects specific to your use case
 
-Artifacts are delivered inline in message text via the WebSocket. The backend expands artifact tags JIT during streaming; clients receive the full artifact JSON (`item_content`, `item_type`) embedded in message text—no separate fetch required.
+Artifacts are delivered inline in message text via the WebSocket. The backend expands artifact tags JIT during streaming; clients receive the full artifact JSON (`item_content`, `item_type`) embedded in message text--no separate fetch required.
 
 ## Authentication
 
-The SDK supports four authentication modes:
+The SDK supports three authentication modes, all configured through `createSunnyChat`:
 
 ### SAML/OIDC (Enterprise SSO)
 
@@ -115,20 +113,6 @@ const chat = await createSunnyChat({
 });
 ```
 
-Or use the headless client directly:
-
-```typescript
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => localStorage.getItem("id_token"),
-  tokenExchange: {
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-client-id",
-    organization: "org_xxx",
-  },
-});
-```
-
 ### Passwordless
 
 Email or SMS-based authentication without passwords. The SDK renders a verification UI in the chat:
@@ -142,29 +126,21 @@ const chat = await createSunnyChat({
 });
 ```
 
-### Anonymous Mode
-
-No authentication required. Conversations are local-only:
-
-```typescript
-const client = new SunnyAgentsClient({
-  createServerConversations: false,
-});
-```
-
-## WebSocket Connection Lifecycle
+## Connection Lifecycle
 
 The SDK manages WebSocket connections automatically:
 
-1. **Connection**: Establish WebSocket connection (default: `wss://chat.api.sunnyhealthai-staging.com`)
-2. **Authentication**: If authenticated, send `auth.upgrade` message with access token
-3. **Messaging**: Send/receive messages
-4. **Reconnection**: Automatically reconnect on failure
-5. **Cleanup**: Close connection when client is destroyed
+1. **Config fetch**: `createSunnyChat` calls `GET /sdk/config` to retrieve auth settings
+2. **Auth activation**: SDK activates the chosen auth mode (popup, token exchange, or passwordless)
+3. **Connection**: WebSocket connects when the user sends their first message
+4. **Authentication**: SDK sends `auth.upgrade` message with credentials
+5. **Messaging**: Send/receive messages in real-time
+6. **Reconnection**: Automatically reconnect on failure
+7. **Cleanup**: Close connection when `chat.destroy()` is called
 
 ## Events
 
-The SDK uses an event-driven architecture. Subscribe to events to update your UI:
+The SDK uses an event-driven architecture. Subscribe to events via `chat.client` to update your UI:
 
 - **`snapshot`**: Emitted when state changes
 - **`conversationCreated`**: New conversation created
@@ -174,11 +150,18 @@ The SDK uses an event-driven architecture. Subscribe to events to update your UI
 - **`quickResponses`**: Quick response suggestions available
 
 ```typescript
-client.on("snapshot", (snapshot) => {
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
+});
+
+chat.client.on("snapshot", (snapshot) => {
   // Update UI with latest state
 });
 
-client.on("streamingDelta", ({ conversationId, messageId, text }) => {
+chat.client.on("streamingDelta", ({ conversationId, messageId, text }) => {
   // Update UI with streaming text
 });
 ```
@@ -188,20 +171,18 @@ client.on("streamingDelta", ({ conversationId, messageId, text }) => {
 **MCP (Model Context Protocol) Approvals** allow users to approve or reject tool execution requests. When the AI needs to execute a tool, it sends an approval request:
 
 ```typescript
-// Approve a request
-await client.sendMcpApproval(
+await chat.client.sendMcpApproval(
   conversationId,
   approvalRequestId,
-  true, // approve
-  "Looks good" // optional reason
+  true,
+  "Looks good"
 );
 
-// Reject a request
-await client.sendMcpApproval(
+await chat.client.sendMcpApproval(
   conversationId,
   approvalRequestId,
-  false, // reject
-  "Not needed" // optional reason
+  false,
+  "Not needed"
 );
 ```
 
@@ -212,7 +193,7 @@ The `approvalRequestId` is the `id` field of the `mcp_approval_request` output i
 Send files as base64-encoded attachments:
 
 ```typescript
-await client.sendMessage("Analyze this image", {
+await chat.client.sendMessage("Analyze this image", {
   files: [
     {
       filename: "image.png",
@@ -224,10 +205,10 @@ await client.sendMessage("Analyze this image", {
 
 ## State Management
 
-The SDK maintains state internally. Access it via:
+The SDK maintains state internally. Access it via `chat.client`:
 
 ```typescript
-const snapshot = client.getSnapshot();
+const snapshot = chat.client.getSnapshot();
 // {
 //   conversations: ConversationState[],
 //   activeConversationId: string | null
@@ -240,25 +221,11 @@ State updates trigger events, allowing you to keep your UI in sync.
 
 <CardGroup cols={2}>
   <Card
-    title="Messaging"
-    icon="duotone message"
-    href="/messaging"
-  >
-    Deep dive into sending messages and handling responses
-  </Card>
-  <Card
-    title="Conversations"
-    icon="duotone comments"
-    href="/conversations"
-  >
-    Learn how to manage multiple conversations
-  </Card>
-  <Card
     title="Authentication"
     icon="duotone lock"
     href="/authentication"
   >
-    Set up authenticated sessions with token exchange
+    Set up authenticated sessions with Auth0, Firebase, or custom providers
   </Card>
   <Card
     title="Artifacts"
@@ -266,5 +233,19 @@ State updates trigger events, allowing you to keep your UI in sync.
     href="/artifacts"
   >
     Parse and render rich content delivered inline
+  </Card>
+  <Card
+    title="Quickstart"
+    icon="duotone rocket"
+    href="/quickstart"
+  >
+    Get up and running in minutes
+  </Card>
+  <Card
+    title="API Reference"
+    icon="duotone code"
+    href="/api-reference"
+  >
+    REST and WebSocket API schemas
   </Card>
 </CardGroup>

@@ -40,41 +40,17 @@ navigation:
           - page: Quickstart
             path: docs/pages/get-started/quickstart.mdx
             icon: fa-duotone fa-rocket
-      - section: Capabilities
+      - section: Guides
         contents:
-          - page: Messaging
-            path: docs/pages/capabilities/messaging.mdx
-            icon: fa-duotone fa-message
-          - page: Conversations
-            path: docs/pages/capabilities/conversations.mdx
-            icon: fa-duotone fa-comments
           - page: Authentication
             path: docs/pages/capabilities/authentication.mdx
             icon: fa-duotone fa-lock
           - page: Artifacts
             path: docs/pages/capabilities/artifacts.mdx
             icon: fa-duotone fa-box
-      - section: Tutorials
-        contents:
-          - page: Getting Started with the Widget
-            path: docs/pages/tutorials/widget-setup.mdx
-            icon: fa-duotone fa-window-maximize
-          - page: Building a Custom UI
-            path: docs/pages/tutorials/custom-ui.mdx
-            icon: fa-duotone fa-code
-          - page: Implementing Authentication
-            path: docs/pages/tutorials/authentication.mdx
-            icon: fa-duotone fa-key
-      - section: Concepts
-        contents:
           - page: Key Concepts
             path: docs/pages/concepts.mdx
             icon: fa-duotone fa-lightbulb
-      - section: SDK
-        contents:
-          - page: Installation
-            path: docs/pages/sdks.mdx
-            icon: fa-duotone fa-download
       - section: Changelog
         contents:
           - changelog: docs/changelog
@@ -98,5 +74,5 @@ theme:
 logo:
   dark: docs/assets/logo.svg
   light: docs/assets/logo.svg
-  height: 20
+  height: 50
 favicon: docs/assets/favicon.png

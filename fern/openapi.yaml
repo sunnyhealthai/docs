@@ -1,9 +1,7 @@
 openapi: 3.1.0
 servers:
-  - url: https://api.sunnyhealthai-staging.com
-    description: Production API server
   - url: https://chat.api.sunnyhealthai-staging.com
-    description: Chat WebSocket server
+    description: Chat API server
 info:
   description: |
     The Sunny Agents SDK provides a TypeScript/JavaScript library designed specifically for building healthcare concierge applications. Embed AI-powered chat experiences that help patients find providers, book appointments, get health information, and navigate care—all in real-time.
@@ -36,24 +34,31 @@ info:
     name: MIT
     url: "https://opensource.org/licenses/MIT"
 tags:
-  - name: chat
+  - name: Chat
     description: WebSocket-based chat messaging operations
-  - name: conversations
+  - name: Conversations
     description: Conversation management operations
-  - name: artifacts
+  - name: Artifacts
     description: Inline artifact format in message text (WebSocket JIT expansion)
-  - name: authentication
+  - name: Authentication
     description: Authentication and token exchange operations
+  - name: Configuration
+    description: SDK configuration retrieval
 paths:
   /oauth/token:
     post:
       tags:
-        - authentication
+        - Authentication
       summary: Exchange ID token for access token
       description: |
         Exchange an ID token for an access token using OAuth 2.0 token exchange.
         This endpoint is used internally by the SDK when token exchange is configured.
       operationId: tokenExchange
+      servers:
+        - url: https://auth.sunnyhealthai.com
+          description: Production API server
+        - url: https://auth.sunnyhealth.live
+          description: Staging API server
       requestBody:
         required: true
         content:
@@ -109,6 +114,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /sdk/config:
+    get:
+      tags:
+        - Configuration
+      summary: Fetch SDK configuration
+      description: |
+        Fetch auth configuration for the SDK. Called by `createSunnyChat` before
+        establishing a WebSocket connection. Returns Auth0 domain, client ID,
+        token exchange URL, and other partner-specific settings needed to
+        activate the chosen authentication mode.
+      operationId: getSdkConfig
+      parameters:
+        - name: x-sunny-partner-identifier
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Partner identifier (e.g., "acme-health")
+          example: "acme-health"
+        - name: x-sunny-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Public API key (e.g., "pk-sunnyagents_abc_xyz")
+          example: "pk-sunnyagents_abc_xyz"
+      responses:
+        "200":
+          description: SDK configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SdkConfigResponse"
+              examples:
+                samlConfig:
+                  summary: SAML partner configuration
+                  value:
+                    config:
+                      auth0_domain: "login.sunnyhealthai.com"
+                      auth0_client_id: "abc123def456"
+                      auth0_connection: "acme-saml"
+                      audience: "https://api.sunnyhealthai-staging.com"
+                      organization: "org_acme"
+                tokenExchangeConfig:
+                  summary: Token exchange configuration
+                  value:
+                    config:
+                      auth0_domain: "login.sunnyhealthai.com"
+                      auth0_client_id: "abc123def456"
+                      audience: "https://api.sunnyhealthai-staging.com"
+                      organization: "org_acme"
+                      token_exchange_url: "https://auth.sunnyhealthai-staging.com/oauth/token"
+        "400":
+          description: Invalid request (missing or malformed headers)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SdkConfigError"
+        "401":
+          description: Invalid API key or unrecognized partner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SdkConfigError"
 components:
   securitySchemes:
     BearerAuth:
@@ -313,6 +382,54 @@ components:
           type: string
         text:
           type: string
+    SdkConfigResponse:
+      type: object
+      required:
+        - config
+      properties:
+        config:
+          $ref: "#/components/schemas/SdkAuthConfig"
+    SdkAuthConfig:
+      type: object
+      description: Server-provided auth configuration. Contains only public fields — no secrets.
+      properties:
+        auth0_domain:
+          type: string
+          description: Auth0 tenant domain for SAML/OIDC/token-exchange flows
+          example: "login.sunnyhealthai.com"
+        auth0_client_id:
+          type: string
+          description: Auth0 application client ID
+          example: "abc123def456"
+        auth0_connection:
+          type: string
+          description: Auth0 connection name (e.g., SAML connection identifier)
+          example: "acme-saml"
+        audience:
+          type: string
+          description: API audience for access tokens
+          example: "https://api.sunnyhealthai-staging.com"
+        organization:
+          type: string
+          description: Auth0 organization identifier
+          example: "org_acme"
+        token_exchange_url:
+          type: string
+          description: Custom token exchange endpoint URL (used when authType is "tokenExchange")
+          example: "https://auth.sunnyhealthai-staging.com/oauth/token"
+    SdkConfigError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+              description: Human-readable error message
     Error:
       type: object
       required:

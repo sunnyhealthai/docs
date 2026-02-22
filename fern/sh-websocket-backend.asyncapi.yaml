@@ -1,0 +1,1346 @@
+asyncapi: 2.6.0
+info:
+  title: Sunny Health WebSocket API
+  version: 0.3.0
+  description: |
+    Real-time bidirectional WebSocket API for the Sunny Health AI chat platform.
+
+    All connections start anonymous. Authentication happens via in-band messages
+    (`auth.upgrade`, `passwordless.*`) after the WebSocket is established.
+
+    ## Connection lifecycle
+
+    1. Client opens `GET /ws` (upgraded to WebSocket).
+    2. Server sends `session.started` with the session ID.
+    3. (SDK connections) Client sends `sdk.session.create` with a public API key.
+    4. Client optionally authenticates via `auth.upgrade` or `passwordless.*`.
+    5. Bidirectional message exchange (chat, conversations, appointments, etc.).
+    6. Either side closes the connection.
+
+    ## Message framing
+
+    Every message is a JSON object with a `type` discriminator field. Client-to-server
+    messages use `InputWebsocketMessage` types; server-to-client messages are either
+    application-level `OutputAppMessage` types or pass-through AI streaming events
+    (`response.*`) wrapped with a `conversation_id`.
+
+  contact:
+    name: Sunny Agents SDK Support
+    email: support@sunnyhealthai.com
+
+servers:
+  staging:
+    url: wss://chat.api.sunnyhealthai-staging.com
+    protocol: wss
+    description: Staging WebSocket server
+  production:
+    url: wss://chat.api.sunnyhealthai.com
+    protocol: wss
+    description: Production WebSocket server
+
+channels:
+  /ws:
+    description: |
+      Real-time AI chat channel.
+
+      **Query parameters** (appended to the connection URL):
+
+      | Parameter | Required | Description |
+      |-----------|----------|-------------|
+      | `session_id` | No | Existing session ID for reconnection. If omitted the server generates one. |
+      | `partner_identifier` | No | Partner name for SDK connections. Also accepted via `X-Sunny-Partner-Identifier` header. |
+
+      **Origin verification**: SDK connections are verified against the partner's
+      configured allowed origins. Non-SDK connections are checked against the
+      server's CORS allowed origins.
+    bindings:
+      ws:
+        query:
+          type: object
+          properties:
+            session_id:
+              type: string
+              description: Existing session ID for reconnection within the same session lifecycle.
+            partner_identifier:
+              type: string
+              description: Partner name for SDK connections (e.g., "acme-health").
+        headers:
+          type: object
+          properties:
+            X-Sunny-Partner-Identifier:
+              type: string
+              description: Alternative to the `partner_identifier` query parameter.
+        bindingVersion: 0.1.0
+    publish:
+      operationId: sendClientMessage
+      summary: Messages sent from client to server
+      message:
+        oneOf:
+          - $ref: "#/components/messages/Chat"
+          - $ref: "#/components/messages/ConversationCreate"
+          - $ref: "#/components/messages/ConversationUpdate"
+          - $ref: "#/components/messages/ConversationDelete"
+          - $ref: "#/components/messages/ConversationList"
+          - $ref: "#/components/messages/ConversationMessages"
+          - $ref: "#/components/messages/ChatCancel"
+          - $ref: "#/components/messages/FileUpload"
+          - $ref: "#/components/messages/ChatFeedback"
+          - $ref: "#/components/messages/AppointmentList"
+          - $ref: "#/components/messages/AppointmentGet"
+          - $ref: "#/components/messages/AuthUpgrade"
+          - $ref: "#/components/messages/PasswordlessStart"
+          - $ref: "#/components/messages/PasswordlessVerify"
+          - $ref: "#/components/messages/SdkSessionCreate"
+    subscribe:
+      operationId: receiveServerMessage
+      summary: Messages sent from server to client
+      message:
+        oneOf:
+          # Session / SDK
+          - $ref: "#/components/messages/SessionStarted"
+          - $ref: "#/components/messages/SdkSessionCreated"
+          - $ref: "#/components/messages/SdkSessionCreateFailed"
+          # Auth
+          - $ref: "#/components/messages/AuthUpgraded"
+          - $ref: "#/components/messages/AuthUpgradeFailed"
+          - $ref: "#/components/messages/PasswordlessOtpSent"
+          - $ref: "#/components/messages/PasswordlessOtpSentFailed"
+          - $ref: "#/components/messages/PasswordlessVerifyFailed"
+          # Conversations
+          - $ref: "#/components/messages/ConversationCreated"
+          - $ref: "#/components/messages/ConversationUpdated"
+          - $ref: "#/components/messages/ConversationDeleted"
+          - $ref: "#/components/messages/ConversationMigrated"
+          - $ref: "#/components/messages/ConversationListResponse"
+          - $ref: "#/components/messages/ConversationMessagesResponse"
+          # Chat streaming
+          - $ref: "#/components/messages/ChatMessageStarted"
+          - $ref: "#/components/messages/ChatCancelled"
+          - $ref: "#/components/messages/ChatQuickResponses"
+          - $ref: "#/components/messages/ChatFeedbackSubmitted"
+          # Files
+          - $ref: "#/components/messages/FileUploaded"
+          # Appointments
+          - $ref: "#/components/messages/AppointmentListResponse"
+          - $ref: "#/components/messages/AppointmentDetails"
+          - $ref: "#/components/messages/AppointmentUpdated"
+          # Errors
+          - $ref: "#/components/messages/ErrorMessage"
+          # AI streaming pass-through
+          - $ref: "#/components/messages/ResponseStreamEvent"
+
+components:
+  messages:
+    # =====================================================================
+    # CLIENT -> SERVER MESSAGES
+    # =====================================================================
+
+    Chat:
+      name: chat
+      title: Send Chat Message
+      summary: Send user message items to the AI assistant within a conversation.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatPayload"
+
+    ConversationCreate:
+      name: conversation.create
+      title: Create Conversation
+      summary: Create a new conversation, optionally with a title.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationCreatePayload"
+
+    ConversationUpdate:
+      name: conversation.update
+      title: Update Conversation
+      summary: Update an existing conversation (e.g., rename).
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationUpdatePayload"
+
+    ConversationDelete:
+      name: conversation.delete
+      title: Delete Conversation
+      summary: Delete a conversation by ID.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationDeletePayload"
+
+    ConversationList:
+      name: conversation.list
+      title: List Conversations
+      summary: Retrieve a paginated list of the user's conversations.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationListPayload"
+
+    ConversationMessages:
+      name: conversation.messages
+      title: List Messages
+      summary: Retrieve messages for a specific conversation.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationMessagesPayload"
+
+    ChatCancel:
+      name: chat.cancel
+      title: Cancel Chat Stream
+      summary: Cancel an ongoing AI response stream for a conversation.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatCancelPayload"
+
+    FileUpload:
+      name: file.upload
+      title: Upload Files
+      summary: Upload base64-encoded file attachments to a conversation.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/FileUploadPayload"
+
+    ChatFeedback:
+      name: chat.feedback
+      title: Submit Feedback
+      summary: Submit positive or negative feedback on an assistant message.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatFeedbackPayload"
+
+    AppointmentList:
+      name: appointment.list
+      title: List Appointments
+      summary: Retrieve a paginated list of the user's appointments.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AppointmentListPayload"
+
+    AppointmentGet:
+      name: appointment.get
+      title: Get Appointment
+      summary: Retrieve details for a specific appointment.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AppointmentGetPayload"
+
+    AuthUpgrade:
+      name: auth.upgrade
+      title: Upgrade Authentication
+      summary: |
+        Upgrade from anonymous to authenticated user using a Bearer token.
+        Optionally migrates anonymous conversation history and syncs profile data.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AuthUpgradePayload"
+
+    PasswordlessStart:
+      name: passwordless.start
+      title: Start Passwordless OTP
+      summary: |
+        Start a passwordless authentication flow by sending an OTP via email or SMS.
+        Only available for SDK (partner) connections.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/PasswordlessStartPayload"
+
+    PasswordlessVerify:
+      name: passwordless.verify
+      title: Verify Passwordless OTP
+      summary: |
+        Verify a passwordless OTP code and authenticate the user.
+        Only available for SDK (partner) connections.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/PasswordlessVerifyPayload"
+
+    SdkSessionCreate:
+      name: sdk.session.create
+      title: Create SDK Session
+      summary: |
+        Verify a partner's public API key and establish an SDK session.
+        Must be sent after `session.started` and before any other operations
+        (for SDK connections). Requires `partner_identifier` at connect time.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/SdkSessionCreatePayload"
+
+    # =====================================================================
+    # SERVER -> CLIENT MESSAGES
+    # =====================================================================
+
+    SessionStarted:
+      name: session.started
+      title: Session Started
+      summary: Sent immediately after WebSocket upgrade completes. Contains the session ID.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/SessionStartedPayload"
+
+    SdkSessionCreated:
+      name: sdk.session.created
+      title: SDK Session Created
+      summary: SDK session verified successfully. Contains partner auth configuration and optional brand theming.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/SdkSessionCreatedPayload"
+
+    SdkSessionCreateFailed:
+      name: sdk.session.create_failed
+      title: SDK Session Creation Failed
+      summary: SDK session creation failed (invalid API key, partner mismatch, etc.).
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/SdkSessionCreateFailedPayload"
+
+    AuthUpgraded:
+      name: auth.upgraded
+      title: Auth Upgraded
+      summary: Authentication upgrade succeeded. The session is now authenticated.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AuthUpgradedPayload"
+
+    AuthUpgradeFailed:
+      name: auth.upgrade_failed
+      title: Auth Upgrade Failed
+      summary: Authentication upgrade failed (invalid token, already authenticated, etc.).
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AuthUpgradeFailedPayload"
+
+    PasswordlessOtpSent:
+      name: passwordless.otp_sent
+      title: OTP Sent
+      summary: Passwordless OTP was sent successfully via the specified connection.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/PasswordlessOtpSentPayload"
+
+    PasswordlessOtpSentFailed:
+      name: passwordless.otp_sent_failed
+      title: OTP Send Failed
+      summary: Failed to send the passwordless OTP.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/PasswordlessOtpSentFailedPayload"
+
+    PasswordlessVerifyFailed:
+      name: passwordless.verify_failed
+      title: OTP Verify Failed
+      summary: Passwordless OTP verification failed (invalid code, expired, etc.).
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/PasswordlessVerifyFailedPayload"
+
+    ConversationCreated:
+      name: conversation.created
+      title: Conversation Created
+      summary: A new conversation was created successfully.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationCreatedPayload"
+
+    ConversationUpdated:
+      name: conversation.updated
+      title: Conversation Updated
+      summary: A conversation was updated successfully.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationUpdatedPayload"
+
+    ConversationDeleted:
+      name: conversation.deleted
+      title: Conversation Deleted
+      summary: A conversation was deleted successfully.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationDeletedPayload"
+
+    ConversationMigrated:
+      name: conversation.migrated
+      title: Conversation Migrated
+      summary: An anonymous conversation was migrated to the authenticated user during auth upgrade.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationMigratedPayload"
+
+    ConversationListResponse:
+      name: conversation.list
+      title: Conversation List
+      summary: Response containing a paginated list of conversations.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationListResponsePayload"
+
+    ConversationMessagesResponse:
+      name: conversation.messages
+      title: Conversation Messages
+      summary: Response containing messages for a conversation.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ConversationMessagesResponsePayload"
+
+    ChatMessageStarted:
+      name: chat.message.started
+      title: Chat Message Started
+      summary: |
+        Signals the start of a new assistant message stream. Sent before any
+        `response.*` streaming events for that message.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatMessageStartedPayload"
+
+    ChatCancelled:
+      name: chat.cancelled
+      title: Chat Cancelled
+      summary: Acknowledgement that the active chat stream was cancelled.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatCancelledPayload"
+
+    ChatQuickResponses:
+      name: chat.quick_responses
+      title: Quick Responses
+      summary: Suggested quick-reply options generated after an assistant message completes.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatQuickResponsesPayload"
+
+    ChatFeedbackSubmitted:
+      name: chat.feedback.submitted
+      title: Feedback Submitted
+      summary: Acknowledgement that message feedback was recorded.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ChatFeedbackSubmittedPayload"
+
+    FileUploaded:
+      name: file.uploaded
+      title: Files Uploaded
+      summary: Confirmation that files were uploaded successfully.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/FileUploadedPayload"
+
+    AppointmentListResponse:
+      name: appointment.list
+      title: Appointment List
+      summary: Response containing a paginated list of appointments.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AppointmentListResponsePayload"
+
+    AppointmentDetails:
+      name: appointment.details
+      title: Appointment Details
+      summary: Response containing full details for a specific appointment.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AppointmentDetailsPayload"
+
+    AppointmentUpdated:
+      name: appointment.updated
+      title: Appointment Updated
+      summary: |
+        Real-time notification that an appointment was updated.
+        Pushed automatically via Postgres LISTEN/NOTIFY when appointment data changes.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AppointmentUpdatedPayload"
+
+    ErrorMessage:
+      name: error
+      title: Error
+      summary: Application-level error response for any failed operation.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ErrorMessagePayload"
+
+    ResponseStreamEvent:
+      name: response.*
+      title: AI Response Stream Event
+      summary: |
+        Pass-through streaming events from the upstream AI provider, wrapped with
+        a `conversation_id` for multiplexing. These events follow the OpenAI
+        Responses API streaming format and include text deltas, output items,
+        completion signals, and error events.
+
+        Key event types:
+        - `response.created` / `response.queued` / `response.in_progress`
+        - `response.output_text.delta` — incremental text chunk
+        - `response.output_text.done` — final complete text
+        - `response.output_item.added` / `response.output_item.done`
+        - `response.content_part.added` / `response.content_part.done`
+        - `response.completed` — full response object
+        - `response.failed` / `response.incomplete`
+        - `response.mcp_call.*` — MCP tool call lifecycle events
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/ResponseStreamEventPayload"
+
+  # =====================================================================
+  # SCHEMAS
+  # =====================================================================
+  schemas:
+    # --- Client -> Server Payloads ---
+
+    ChatPayload:
+      type: object
+      required: [type, items, conversation_id]
+      properties:
+        type:
+          type: string
+          const: chat
+        items:
+          type: array
+          description: |
+            Array of input items (user messages, MCP approval responses, etc.)
+            following the OpenAI Responses API `ResponseInputItem` format.
+          items:
+            type: object
+            additionalProperties: true
+        conversation_id:
+          type: string
+          format: uuid
+          description: Target conversation ID.
+
+    ConversationCreatePayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: conversation.create
+        name:
+          type: string
+          nullable: true
+          description: Optional conversation title.
+
+    ConversationUpdatePayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          const: conversation.update
+        conversation_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+          description: New conversation title.
+
+    ConversationDeletePayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          const: conversation.delete
+        conversation_id:
+          type: string
+          format: uuid
+
+    ConversationListPayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: conversation.list
+        limit:
+          type: integer
+          nullable: true
+          description: Maximum number of conversations to return (default 50).
+        offset:
+          type: integer
+          nullable: true
+          description: Number of conversations to skip (default 0).
+
+    ConversationMessagesPayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          const: conversation.messages
+        conversation_id:
+          type: string
+          format: uuid
+        limit:
+          type: integer
+          nullable: true
+          description: Maximum number of messages to return (default 100).
+
+    ChatCancelPayload:
+      type: object
+      required: [type, conversation_id]
+      properties:
+        type:
+          type: string
+          const: chat.cancel
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation whose active stream should be cancelled.
+
+    FileUploadPayload:
+      type: object
+      required: [type, conversation_id, files]
+      properties:
+        type:
+          type: string
+          const: file.upload
+        conversation_id:
+          type: string
+          format: uuid
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileAttachment"
+
+    ChatFeedbackPayload:
+      type: object
+      required: [type, conversation_id, message_id, feedback]
+      properties:
+        type:
+          type: string
+          const: chat.feedback
+        conversation_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+          description: ID of the assistant message to rate.
+        feedback:
+          type: boolean
+          description: "`true` for positive feedback, `false` for negative."
+
+    AppointmentListPayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: appointment.list
+        limit:
+          type: integer
+          nullable: true
+          description: Maximum number of appointments to return (default 50).
+        offset:
+          type: integer
+          nullable: true
+          description: Number of appointments to skip (default 0).
+
+    AppointmentGetPayload:
+      type: object
+      required: [type, appointment_id]
+      properties:
+        type:
+          type: string
+          const: appointment.get
+        appointment_id:
+          type: string
+          format: uuid
+
+    AuthUpgradePayload:
+      type: object
+      required: [type, token]
+      properties:
+        type:
+          type: string
+          const: auth.upgrade
+        token:
+          type: string
+          description: Bearer token (access token from Auth0 token exchange or passwordless flow).
+        migrate_history:
+          type: boolean
+          default: false
+          description: Whether to migrate anonymous conversation history to the authenticated user.
+        user_profile:
+          $ref: "#/components/schemas/AuthUpgradeProfile"
+        user_address:
+          $ref: "#/components/schemas/AuthUpgradeAddress"
+        insurances:
+          type: array
+          nullable: true
+          description: Optional insurance records (SDK partner pre-collected data).
+          items:
+            $ref: "#/components/schemas/AuthUpgradeInsurance"
+
+    PasswordlessStartPayload:
+      type: object
+      required: [type, connection]
+      properties:
+        type:
+          type: string
+          const: passwordless.start
+        connection:
+          type: string
+          enum: [email, sms]
+          description: OTP delivery channel.
+        email:
+          type: string
+          nullable: true
+          description: Required when `connection` is `email`.
+        phone_number:
+          type: string
+          nullable: true
+          description: Required when `connection` is `sms`.
+
+    PasswordlessVerifyPayload:
+      type: object
+      required: [type, otp, connection]
+      properties:
+        type:
+          type: string
+          const: passwordless.verify
+        otp:
+          type: string
+          description: One-time password entered by the user.
+        connection:
+          type: string
+          enum: [email, sms]
+        email:
+          type: string
+          nullable: true
+          description: Required when `connection` is `email`.
+        phone_number:
+          type: string
+          nullable: true
+          description: Required when `connection` is `sms`.
+        migrate_history:
+          type: boolean
+          default: false
+          description: Whether to migrate anonymous conversation history to the authenticated user.
+
+    SdkSessionCreatePayload:
+      type: object
+      required: [type, api_key]
+      properties:
+        type:
+          type: string
+          const: sdk.session.create
+        api_key:
+          type: string
+          description: "Partner's public API key (e.g., `pk-sunnyagents_...`)."
+
+    # --- Server -> Client Payloads ---
+
+    SessionStartedPayload:
+      type: object
+      required: [type, session_id]
+      properties:
+        type:
+          type: string
+          const: session.started
+        session_id:
+          type: string
+          description: Server-generated or client-provided session ID.
+
+    SdkSessionCreatedPayload:
+      type: object
+      required: [type, partner_id, config]
+      properties:
+        type:
+          type: string
+          const: sdk.session.created
+        partner_id:
+          type: string
+          format: uuid
+          description: Partner ID associated with the verified API key.
+        config:
+          $ref: "#/components/schemas/SdkAuthConfig"
+        brand:
+          $ref: "#/components/schemas/SdkBrandConfig"
+
+    SdkSessionCreateFailedPayload:
+      type: object
+      required: [type, error, code]
+      properties:
+        type:
+          type: string
+          const: sdk.session.create_failed
+        error:
+          type: string
+          description: Human-readable error message.
+        code:
+          type: string
+          description: Machine-readable error code (e.g., `INVALID_API_KEY`, `PARTNER_NOT_FOUND`).
+
+    AuthUpgradedPayload:
+      type: object
+      required: [type, user_id]
+      properties:
+        type:
+          type: string
+          const: auth.upgraded
+        user_id:
+          type: string
+          format: uuid
+          description: Authenticated user's database ID.
+        email:
+          type: string
+          nullable: true
+          description: Authenticated user's email (if available).
+
+    AuthUpgradeFailedPayload:
+      type: object
+      required: [type, error, code]
+      properties:
+        type:
+          type: string
+          const: auth.upgrade_failed
+        error:
+          type: string
+        code:
+          type: string
+          description: |
+            Error codes: `INVALID_TOKEN`, `ALREADY_AUTHENTICATED`,
+            `SESSION_UPDATE_FAILED`, `PROFILE_SAVE_FAILED`,
+            `ADDRESS_SAVE_FAILED`, `INSURANCE_SAVE_FAILED`, `PARTNER_REQUIRED`.
+
+    PasswordlessOtpSentPayload:
+      type: object
+      required: [type, connection]
+      properties:
+        type:
+          type: string
+          const: passwordless.otp_sent
+        connection:
+          type: string
+          enum: [email, sms]
+          description: Connection type used.
+
+    PasswordlessOtpSentFailedPayload:
+      type: object
+      required: [type, error, code]
+      properties:
+        type:
+          type: string
+          const: passwordless.otp_sent_failed
+        error:
+          type: string
+        code:
+          type: string
+          description: |
+            Error codes: `PARTNER_REQUIRED`, `INVALID_CONNECTION`,
+            `PARTNER_NOT_FOUND`, `AUTH0_CREDENTIALS_MISSING`,
+            `OTP_SEND_FAILED`, `INTERNAL_ERROR`.
+
+    PasswordlessVerifyFailedPayload:
+      type: object
+      required: [type, error, code]
+      properties:
+        type:
+          type: string
+          const: passwordless.verify_failed
+        error:
+          type: string
+        code:
+          type: string
+          description: |
+            Error codes: `PARTNER_REQUIRED`, `INVALID_CONNECTION`,
+            `PARTNER_NOT_FOUND`, `AUTH0_CREDENTIALS_MISSING`,
+            `INVALID_OTP`, `OTP_VERIFY_FAILED`, `INTERNAL_ERROR`.
+
+    ConversationCreatedPayload:
+      type: object
+      required: [type, conversation]
+      properties:
+        type:
+          type: string
+          const: conversation.created
+        conversation:
+          $ref: "#/components/schemas/Conversation"
+
+    ConversationUpdatedPayload:
+      type: object
+      required: [type, conversation]
+      properties:
+        type:
+          type: string
+          const: conversation.updated
+        conversation:
+          $ref: "#/components/schemas/Conversation"
+
+    ConversationDeletedPayload:
+      type: object
+      required: [type, conversation_id, deleted]
+      properties:
+        type:
+          type: string
+          const: conversation.deleted
+        conversation_id:
+          type: string
+          format: uuid
+        deleted:
+          type: boolean
+
+    ConversationMigratedPayload:
+      type: object
+      required: [type, old_conversation_id, new_conversation_id, conversation]
+      properties:
+        type:
+          type: string
+          const: conversation.migrated
+        old_conversation_id:
+          type: string
+          format: uuid
+          description: Original anonymous conversation ID.
+        new_conversation_id:
+          type: string
+          format: uuid
+          description: New authenticated conversation ID.
+        conversation:
+          $ref: "#/components/schemas/Conversation"
+
+    ConversationListResponsePayload:
+      type: object
+      required: [type, conversations, limit, offset]
+      properties:
+        type:
+          type: string
+          const: conversation.list
+        conversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Conversation"
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    ConversationMessagesResponsePayload:
+      type: object
+      required: [type, conversation_id, messages, limit]
+      properties:
+        type:
+          type: string
+          const: conversation.messages
+        conversation_id:
+          type: string
+          format: uuid
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        limit:
+          type: integer
+
+    ChatMessageStartedPayload:
+      type: object
+      required: [type, conversation_id, message_id, role]
+      properties:
+        type:
+          type: string
+          const: chat.message.started
+        conversation_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+          description: ID of the assistant message being streamed.
+        role:
+          type: string
+          description: Always `assistant` for AI-generated messages.
+
+    ChatCancelledPayload:
+      type: object
+      required: [type, metadata]
+      properties:
+        type:
+          type: string
+          const: chat.cancelled
+        metadata:
+          $ref: "#/components/schemas/ChatCancelledMetadata"
+
+    ChatQuickResponsesPayload:
+      type: object
+      required: [type, conversation_id, responses]
+      properties:
+        type:
+          type: string
+          const: chat.quick_responses
+        conversation_id:
+          type: string
+          format: uuid
+        responses:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuickResponse"
+
+    ChatFeedbackSubmittedPayload:
+      type: object
+      required: [type, conversation_id, message_id, feedback, success]
+      properties:
+        type:
+          type: string
+          const: chat.feedback.submitted
+        conversation_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+        feedback:
+          type: boolean
+        success:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+
+    FileUploadedPayload:
+      type: object
+      required: [type, conversation_id, files]
+      properties:
+        type:
+          type: string
+          const: file.uploaded
+        conversation_id:
+          type: string
+          format: uuid
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/UploadedFile"
+
+    AppointmentListResponsePayload:
+      type: object
+      required: [type, appointments, limit, offset]
+      properties:
+        type:
+          type: string
+          const: appointment.list
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    AppointmentDetailsPayload:
+      type: object
+      required: [type, appointment]
+      properties:
+        type:
+          type: string
+          const: appointment.details
+        appointment:
+          $ref: "#/components/schemas/Appointment"
+
+    AppointmentUpdatedPayload:
+      type: object
+      required: [type, appointment]
+      properties:
+        type:
+          type: string
+          const: appointment.updated
+        appointment:
+          $ref: "#/components/schemas/Appointment"
+
+    ErrorMessagePayload:
+      type: object
+      required: [type, error]
+      properties:
+        type:
+          type: string
+          const: error
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ResponseStreamEventPayload:
+      type: object
+      required: [type, conversation_id]
+      description: |
+        AI response streaming events forwarded from the upstream provider.
+        Each event has a `type` field (e.g., `response.output_text.delta`)
+        and a `conversation_id` for client-side routing.
+
+        Common event types and their key fields:
+
+        | Type | Key Fields | Description |
+        |------|------------|-------------|
+        | `response.created` | `response` | Response object created |
+        | `response.queued` | `response` | Response queued for processing |
+        | `response.in_progress` | `response` | Response processing started |
+        | `response.output_text.delta` | `delta`, `item_id`, `content_index` | Incremental text chunk |
+        | `response.output_text.done` | `text`, `item_id`, `content_index` | Final complete text for a content part |
+        | `response.output_item.added` | `item`, `output_index` | New output item (message, tool call, etc.) |
+        | `response.output_item.done` | `item`, `output_index` | Output item finalized |
+        | `response.content_part.added` | `part`, `item_id`, `content_index` | New content part within an output item |
+        | `response.content_part.done` | `part`, `item_id`, `content_index` | Content part finalized |
+        | `response.completed` | `response` | Full response object with all output |
+        | `response.failed` | `response` | Response generation failed |
+        | `response.incomplete` | `response` | Response truncated (max tokens, etc.) |
+        | `response.mcp_call.in_progress` | `item_id` | MCP tool call started |
+        | `response.mcp_call.completed` | `item_id` | MCP tool call finished |
+        | `response.mcp_call.failed` | `item_id` | MCP tool call failed |
+        | `response.output_text.annotation.added` | `annotation`, `item_id` | URL/file citation added |
+      properties:
+        type:
+          type: string
+          description: Event type following `response.*` naming convention.
+        conversation_id:
+          type: string
+          format: uuid
+          description: Conversation this event belongs to (for multiplexing).
+      additionalProperties: true
+
+    # --- Shared Schemas ---
+
+    FileAttachment:
+      type: object
+      required: [filename, mime_type, content, size]
+      description: Base64-encoded file attachment for upload.
+      properties:
+        filename:
+          type: string
+          description: Original filename.
+        mime_type:
+          type: string
+          description: MIME type (e.g., `image/png`, `application/pdf`).
+        content:
+          type: string
+          description: Base64-encoded file content.
+        size:
+          type: integer
+          format: int64
+          description: File size in bytes (max 10 MB).
+
+    ErrorObject:
+      type: object
+      required: [message, code]
+      description: Structured error envelope used in all error responses.
+      properties:
+        message:
+          type: string
+          description: Human-readable error description.
+        code:
+          type: string
+          description: |
+            Machine-readable error code. Common codes:
+
+            - `AUTH_FAILED` — authentication failed
+            - `PARSE_ERROR` — malformed JSON message
+            - `CONVERSATION_NOT_FOUND` — conversation does not exist or access denied
+            - `CONVERSATION_ACCESS_DENIED` — insufficient permissions
+            - `SDK_SESSION_REQUIRED` — SDK session not yet created
+            - `ORIGIN_NOT_ALLOWED` — connection origin rejected
+            - `SESSION_REVOKED` / `SESSION_EXPIRED` / `SESSION_NOT_FOUND`
+            - `PROCESSING_ERROR` — generic server-side processing failure
+            - `SEND_ERROR` / `INTERNAL_ERROR`
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Conversation ID when the error is conversation-scoped.
+
+    AuthUpgradeProfile:
+      type: object
+      nullable: true
+      description: Optional user profile data sent with auth.upgrade (partner pre-collected).
+      properties:
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        date_of_birth:
+          type: string
+          nullable: true
+          description: Date of birth in YYYY-MM-DD format.
+        gender:
+          type: string
+          nullable: true
+          description: "Gender (e.g., `male`, `female`, `other`)."
+
+    AuthUpgradeAddress:
+      type: object
+      nullable: true
+      required: [address_line_1, city, state, zip_code]
+      description: Optional user address sent with auth.upgrade (partner pre-collected).
+      properties:
+        address_line_1:
+          type: string
+        address_line_2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        state:
+          type: string
+        zip_code:
+          type: string
+        country:
+          type: string
+          default: USA
+
+    AuthUpgradeInsurance:
+      type: object
+      required: [partner_plan_id, member_id, group_id]
+      description: Insurance record sent with auth.upgrade. Backend resolves via enterprise partner plans.
+      properties:
+        partner_plan_id:
+          type: string
+          format: uuid
+          description: Partner plan ID (from enterprise configuration).
+        member_id:
+          type: string
+        group_id:
+          type: string
+
+    SdkAuthConfig:
+      type: object
+      description: Server-provided auth configuration returned in `sdk.session.created`. Public fields only.
+      properties:
+        auth0_domain:
+          type: string
+          nullable: true
+          description: "Auth0 tenant domain (e.g., `your-tenant.auth0.com`). Used by SAML/OIDC."
+        auth0_client_id:
+          type: string
+          nullable: true
+          description: SPA client ID (public, no secret). Used by SAML/OIDC and token exchange.
+        auth0_connection:
+          type: string
+          nullable: true
+          description: SAML/OIDC connection name.
+        audience:
+          type: string
+          nullable: true
+          description: API audience for access tokens.
+        organization:
+          type: string
+          nullable: true
+          description: Auth0 organization ID.
+        token_exchange_url:
+          type: string
+          nullable: true
+          description: Override URL for token exchange endpoint.
+
+    SdkBrandConfig:
+      type: object
+      nullable: true
+      description: Optional brand theming for the SDK widget.
+      properties:
+        name:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+
+    Conversation:
+      type: object
+      required: [id]
+      description: Conversation object.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+          description: Optional conversation title.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      required: [id, conversation_id, user_id, content, created_at]
+      description: Stored message within a conversation.
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          nullable: true
+          enum: [user, assistant, system]
+        content:
+          type: array
+          description: Array of content items (OpenAI ResponseInputItem or ResponseOutputItem JSON).
+          items:
+            type: object
+            additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        feedback:
+          type: boolean
+          nullable: true
+          description: User feedback on the message (true = positive, false = negative).
+
+    UploadedFile:
+      type: object
+      required: [id, conversation_id, filename, mime_type, file_size]
+      description: Server record of an uploaded file.
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        mime_type:
+          type: string
+        file_size:
+          type: integer
+          format: int64
+
+    Appointment:
+      type: object
+      description: Full appointment record with related data.
+      properties:
+        appointment:
+          type: object
+          description: Core appointment fields.
+          additionalProperties: true
+      additionalProperties: true
+
+    ChatCancelledMetadata:
+      type: object
+      required: [step]
+      properties:
+        step:
+          type: string
+          description: Cancellation step (e.g., `cancelled`).
+
+    QuickResponse:
+      type: object
+      required: [text]
+      description: Suggested quick-reply option.
+      properties:
+        text:
+          type: string
+          description: Suggested response text.
+        is_profile_prompt:
+          type: boolean
+          nullable: true
+          description: Whether this prompt is asking for profile information.

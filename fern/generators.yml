@@ -3,3 +3,4 @@
 api:
   specs:
     - openapi: openapi.yaml
+    - asyncapi: sh-websocket-backend.asyncapi.yaml

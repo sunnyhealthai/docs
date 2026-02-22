@@ -4,11 +4,9 @@ subtitle: Get up and running with the Sunny Agents SDK in minutes
 slug: quickstart
 ---
 
-This guide shows you how to integrate the Sunny Agents SDK into your application. Choose between the drop-in widget for quick integration or the headless client for custom UI implementations.
+This guide shows you how to integrate the Sunny Agents SDK into your application using `createSunnyChat`.
 
-## Quick start with the widget
-
-The fastest way to add chat to your app:
+## Quick start
 
 <Steps>
 <Step title="Get your credentials">
@@ -37,7 +35,7 @@ yarn add @sunnyhealthai/agents-sdk
 
 </Step>
 
-<Step title="Add the widget to your HTML">
+<Step title="Add the chat widget">
 
 Create an HTML file and add a container for the chat widget:
 
@@ -52,7 +50,6 @@ Create an HTML file and add a container for the chat widget:
   <script type="module">
     import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-    // Automatically handles authentication and server configuration
     const chat = await createSunnyChat({
       container: document.getElementById("sunny-chat"),
       partnerIdentifier: "acme-health",
@@ -66,35 +63,6 @@ Create an HTML file and add a container for the chat widget:
 </html>
 ```
 
-**Or use the lower-level widget for anonymous/local development only:**
-
-```html title="index.html"
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Sunny Agents Chat</title>
-</head>
-<body>
-  <div id="sunny-chat"></div>
-  <script type="module">
-    import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-    // Anonymous mode only — no sdk.session.create, no auth
-    attachSunnyChat({
-      container: document.getElementById("sunny-chat"),
-      config: {
-        websocketUrl: "wss://chat.api.sunnyhealthai-staging.com",
-      },
-      headerTitle: "Sunny Health Concierge",
-      placeholder: "How can I help you find care?",
-    });
-  </script>
-</body>
-</html>
-```
-
-For production or authenticated use, use `createSunnyChat` instead.
-
 </Step>
 
 <Step title="Test it out">
@@ -104,93 +72,11 @@ Open your HTML file in a browser and start chatting! The widget will automatical
 </Step>
 </Steps>
 
-## Quick start with the headless client
+## Authentication options
 
-For custom UI implementations, use the headless client. The example below uses **anonymous mode** (no server persistence). For authenticated use, use `createSunnyChat` and access `chat.client`.
+Choose the authentication mode that fits your application:
 
-<Steps>
-<Step title="Install the SDK">
-
-Same as above - install the SDK package.
-
-</Step>
-
-<Step title="Create a client instance">
-
-```typescript title="app.ts"
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-// Anonymous mode — websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
-const client = new SunnyAgentsClient();
-```
-
-</Step>
-
-<Step title="Listen to events and send messages">
-
-```typescript title="app.ts"
-// Listen to state changes
-client.on("snapshot", (snapshot) => {
-  console.log("Current conversations:", snapshot.conversations);
-  console.log("Active conversation:", snapshot.activeConversationId);
-});
-
-// Listen to streaming updates
-client.on("streamingDelta", ({ conversationId, messageId, text }) => {
-  console.log("Streaming response:", text);
-});
-
-// Send a message
-await client.sendMessage("I need to find a cardiologist");
-```
-
-</Step>
-
-<Step title="Render messages in your UI">
-
-```typescript title="app.ts"
-// Get current state
-const snapshot = client.getSnapshot();
-const activeConversation = snapshot.conversations.find(
-  (c) => c.id === snapshot.activeConversationId
-);
-
-if (activeConversation) {
-  activeConversation.messages.forEach((message) => {
-    console.log(`${message.role}: ${message.text}`);
-  });
-}
-```
-
-</Step>
-</Steps>
-
-## Configuration options
-
-### Basic configuration
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-// websocketUrl defaults to wss://chat.api.sunnyhealthai-staging.com
-const client = new SunnyAgentsClient();
-```
-
-### Anonymous mode
-
-For local-only conversations without server persistence:
-
-```typescript
-const client = new SunnyAgentsClient({
-  createServerConversations: false,
-});
-```
-
-### Authenticated mode
-
-For production applications with user authentication, use the unified `createSunnyChat` API. It only requires three parameters -- all Auth0 configuration is provided by the server automatically:
-
-**SAML/OIDC Authentication (Recommended):**
+**SAML/OIDC Authentication (Recommended for Enterprise):**
 
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
@@ -214,83 +100,94 @@ const chat = await createSunnyChat({
   publicKey: "pk-sunnyagents_abc_xyz",
   authType: "tokenExchange",
   idTokenProvider: async () => {
-    // Return ID token from your auth provider
     return localStorage.getItem("id_token");
   },
 });
 ```
 
-**Or use the headless client directly:**
+## Programmatic control
+
+`createSunnyChat` returns a chat instance with a `client` property for programmatic access:
 
 ```typescript
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => {
-    // Return ID token from your auth provider
-    return localStorage.getItem("id_token");
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
+});
+
+// Listen to state changes
+chat.client.on("snapshot", (snapshot) => {
+  console.log("Current conversations:", snapshot.conversations);
+  console.log("Active conversation:", snapshot.activeConversationId);
+});
+
+// Listen to streaming updates
+chat.client.on("streamingDelta", ({ conversationId, messageId, text }) => {
+  console.log("Streaming response:", text);
+});
+
+// Send a message programmatically
+await chat.client.sendMessage("I need to find a cardiologist");
+
+// Clean up when done
+chat.destroy();
+```
+
+## Customization
+
+Customize the widget's appearance:
+
+```typescript
+const chat = await createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
+  headerTitle: "Sunny Health Concierge",
+  placeholder: "How can I help you find care?",
+  colors: {
+    primary: "#006fff",
+    secondary: "#212124",
+    accent: "#22c55e",
   },
-  tokenExchange: {
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-client-id",
-    organization: "org_xxx",
-  },
+  fontSize: "14px",
+  fontFamily: "'Inter', sans-serif",
 });
 ```
 
-## Complete example
+## React example
 
-Here's a complete example using the headless client with React:
+```tsx title="ChatWidget.tsx"
+import { useEffect, useRef } from "react";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+import type { VanillaChatInstance } from "@sunnyhealthai/agents-sdk";
 
-```typescript title="ChatComponent.tsx"
-import { useEffect, useState } from "react";
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-import type { SunnyAgentsClientSnapshot } from "@sunnyhealthai/agents-sdk";
-
-export function ChatComponent() {
-  const [client] = useState(() => new SunnyAgentsClient());
-  
-  const [snapshot, setSnapshot] = useState<SunnyAgentsClientSnapshot>(
-    () => client.getSnapshot()
-  );
-  const [input, setInput] = useState("");
+export function ChatWidget() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<VanillaChatInstance | null>(null);
 
   useEffect(() => {
-    const unsubscribe = client.on("snapshot", (snap) => {
-      setSnapshot(snap);
-    });
-    return unsubscribe;
-  }, [client]);
+    if (!containerRef.current) return;
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    await client.sendMessage(input); // e.g., "Find me a primary care doctor"
-    setInput("");
-  };
+    const init = async () => {
+      chatRef.current = await createSunnyChat({
+        container: containerRef.current!,
+        partnerIdentifier: "acme-health",
+        publicKey: "pk-sunnyagents_abc_xyz",
+        authType: "passwordless",
+      });
+    };
 
-  const activeConversation = snapshot.conversations.find(
-    (c) => c.id === snapshot.activeConversationId
-  );
+    init();
 
-  return (
-    <div>
-      <div className="messages">
-        {activeConversation?.messages.map((msg) => (
-          <div key={msg.id} className={`message message--${msg.role}`}>
-            {msg.text}
-          </div>
-        ))}
-      </div>
-      <div className="input-area">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Ask about providers, appointments, or health questions..."
-        />
-        <button onClick={handleSend}>Send</button>
-      </div>
-    </div>
-  );
+    return () => {
+      chatRef.current?.destroy();
+    };
+  }, []);
+
+  return <div ref={containerRef} />;
 }
 ```
 
@@ -298,24 +195,24 @@ export function ChatComponent() {
 
 <CardGroup cols={3}>
   <Card
-    title="Widget Setup"
-    icon="duotone window-maximize"
-    href="/widget-setup"
-  >
-    Learn how to customize the chat widget
-  </Card>
-  <Card
-    title="Custom UI"
-    icon="duotone code"
-    href="/custom-ui"
-  >
-    Build a custom chat interface
-  </Card>
-  <Card
     title="Authentication"
     icon="duotone lock"
     href="/authentication"
   >
     Set up authenticated sessions
+  </Card>
+  <Card
+    title="Artifacts"
+    icon="duotone box"
+    href="/artifacts"
+  >
+    Parse and render rich content
+  </Card>
+  <Card
+    title="Key Concepts"
+    icon="duotone lightbulb"
+    href="/concepts"
+  >
+    Events, state management, and more
   </Card>
 </CardGroup>

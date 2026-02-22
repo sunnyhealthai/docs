@@ -4,7 +4,7 @@ subtitle: Secure token exchange and session management
 slug: authentication
 ---
 
-The Sunny Agents SDK supports multiple authentication modes: SAML/OIDC via Auth0, custom token exchange, passwordless authentication, and anonymous mode for local-only conversations. With `createSunnyChat`, all authentication configuration is **server-driven** -- you only specify the auth type and the server provides the necessary Auth0 details automatically.
+The Sunny Agents SDK supports multiple authentication modes: SAML/OIDC via Auth0, custom token exchange, and passwordless authentication. With `createSunnyChat`, all authentication configuration is **server-driven** -- you only specify the auth type and the server provides the necessary Auth0 details automatically.
 
 ## Authentication modes
 
@@ -44,34 +44,10 @@ const chat = await createSunnyChat({
   publicKey: "pk-sunnyagents_abc_xyz",
   authType: "tokenExchange",
   idTokenProvider: async () => {
-    // Return ID token from your auth provider
     return localStorage.getItem("id_token");
   },
 });
 ```
-
-**Or use the headless client directly:**
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-const client = new SunnyAgentsClient({
-  idTokenProvider: async () => {
-    // Return ID token from your auth provider
-    return localStorage.getItem("id_token");
-  },
-  tokenExchange: {
-    partnerName: "your-partner-name",
-    audience: "https://api.sunnyhealthai-staging.com",
-    clientId: "your-client-id",
-    organization: "org_xxx",
-  },
-});
-```
-
-<Tip>
-  The `tokenExchange` values (`audience`, `clientId`, `organization`, `tokenExchangeUrl`) come from your [Sunny Central](/partner-setup) SDK config or your Sunny Health representative. Prefer `createSunnyChat` with `authType: "tokenExchange"` when possible — it fetches this config from the server automatically.
-</Tip>
 
 **Features:**
 
@@ -100,107 +76,62 @@ const chat = await createSunnyChat({
 - Email or SMS authentication
 - No passwords required
 - WebSocket-based (no page refreshes)
-- Optional chat history migration from anonymous to authenticated
+- Optional chat history migration
 - Automatic token management
 - In-chat verification UI
 
-### Anonymous mode
+## Authentication flow
 
-For local-only conversations without authentication:
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-const client = new SunnyAgentsClient({
-  createServerConversations: false,
-});
-```
-
-**Features:**
-
-- No authentication required
-- Local-only conversations
-- Faster setup
-- No user data persistence
-
-## Authentication flows
-
-### Server-Driven Configuration Flow
-
-When using `createSunnyChat`, all auth configuration comes from the server:
+When using `createSunnyChat`, auth configuration is fetched via **HTTP** from the [`/sdk/config`](/api-reference/authentication/get-sdk-config) endpoint _before_ any WebSocket connection is established:
 
 ```mermaid
 sequenceDiagram
     participant App
     participant SDK
+    participant ConfigAPI as /sdk/config
     participant WebSocket
     participant Auth0
 
     App->>SDK: createSunnyChat with partnerIdentifier, publicKey, authType
-    SDK->>WebSocket: Connect
-    WebSocket-->>SDK: sdk.session.created with auth config
-    Note over SDK: Auth config includes Auth0 domain, clientId, connection, etc.
+    SDK->>ConfigAPI: GET /sdk/config (partner + API key headers)
+    ConfigAPI-->>SDK: SdkAuthConfig (Auth0 domain, clientId, connection, etc.)
 
     alt SAML/OIDC
         SDK->>Auth0: Trigger login popup
         Auth0-->>SDK: ID token
-        SDK->>WebSocket: auth.upgrade with ID token
     else Token Exchange
         SDK->>App: Call idTokenProvider
         App-->>SDK: ID token
-        SDK->>WebSocket: auth.upgrade via token exchange
     else Passwordless
-        Note over SDK: Renders verification UI in chat
-        SDK->>WebSocket: passwordless.start
-        WebSocket-->>SDK: OTP sent
-        SDK->>WebSocket: passwordless.verify with code
+        Note over SDK: Verification UI rendered on first message
     end
 
+    Note over SDK: WebSocket connects when user sends first message
+    SDK->>WebSocket: Connect + auth.upgrade
     WebSocket-->>SDK: auth.upgraded
-```
-
-### Token Exchange Flow
-
-For custom token exchange with the headless client:
-
-```mermaid
-sequenceDiagram
-    participant App
-    participant SDK
-    participant AuthProvider
-    participant TokenExchange
-    participant ChatAPI
-
-    App->>SDK: Create client with idTokenProvider
-    SDK->>ChatAPI: Connect WebSocket
-    SDK->>AuthProvider: Get ID token
-    AuthProvider-->>SDK: ID token
-    SDK->>TokenExchange: Exchange ID token for access token
-    TokenExchange-->>SDK: Access token
-    SDK->>ChatAPI: Send auth.upgrade with access token
-    ChatAPI-->>SDK: auth.upgraded response
 ```
 
 ### Step-by-step
 
 **SAML/OIDC:**
 1. **Create chat**: Call `createSunnyChat` with `authType: "saml"` or `"oidc"`
-2. **Connect**: SDK connects to WebSocket and receives server auth config
+2. **Fetch config**: SDK calls `GET /sdk/config` to retrieve Auth0 settings
 3. **Auto-login**: SDK automatically triggers Auth0 authentication popup
-4. **Upgrade auth**: SDK sends `auth.upgrade` message with ID token
-5. **Authenticated**: SDK receives `auth.upgraded` response
+4. **First message**: WebSocket connects when the user sends a message
+5. **Upgrade auth**: SDK sends `auth.upgrade` message with ID token
+6. **Authenticated**: SDK receives `auth.upgraded` response
 
 **Token Exchange:**
-1. **Connect**: SDK connects to WebSocket
-2. **Provide ID token**: Your app provides an ID token via `idTokenProvider`
-3. **Exchange token**: SDK exchanges ID token for access token
-4. **Upgrade auth**: SDK sends `auth.upgrade` message with access token
-5. **Authenticated**: SDK receives `auth.upgraded` response
-6. **Refresh**: SDK automatically refreshes token when expired
+1. **Create chat**: Call `createSunnyChat` with `authType: "tokenExchange"`
+2. **Fetch config**: SDK calls `GET /sdk/config` to retrieve token exchange settings
+3. **First message**: WebSocket connects when the user sends a message
+4. **Provide ID token**: Your app provides an ID token via `idTokenProvider`
+5. **Exchange token**: SDK exchanges ID token for access token
+6. **Upgrade auth**: SDK sends `auth.upgrade` message with access token
+7. **Authenticated**: SDK receives `auth.upgraded` response
+8. **Refresh**: SDK automatically refreshes token when expired
 
 ## Configuration options
-
-### UnifiedSunnyChatOptions (for createSunnyChat)
 
 ```typescript
 interface UnifiedSunnyChatOptions {
@@ -217,46 +148,9 @@ interface UnifiedSunnyChatOptions {
 }
 ```
 
-### Token Exchange Configuration (for headless client)
-
-When using `SunnyAgentsClient` directly, provide token exchange config:
-
-```typescript
-interface TokenExchangeConfig {
-  partnerName: string;      // Partner identifier (e.g., "acme-health")
-  audience: string;         // API audience (e.g., "https://api.sunnyhealthai-staging.com")
-  clientId: string;         // Auth0 client ID
-  organization: string;     // Auth0 organization ID
-  tokenExchangeUrl?: string; // Optional custom token exchange URL
-  devRoute?: string;        // Optional developer route
-}
-```
-
-### Partner name
-
-The partner name is used to construct the subject token type:
-
-```
-urn:{partnerName}:id-token
-```
-
-Example: `urn:acme-health:id-token`
-
-### Audience
-
-The audience specifies which API the access token is for:
-
-```
-https://api.sunnyhealthai-staging.com
-```
-
-### Client ID
-
-Your Auth0 client ID for token exchange.
-
 ## Runtime auth type switching
 
-When using `createSunnyChat`, you can switch the authentication type at runtime:
+You can switch the authentication type at runtime:
 
 ```typescript
 const chat = await createSunnyChat({
@@ -279,22 +173,26 @@ await chat.setAuthType("tokenExchange", {
 
 ### Auth0 with React
 
-For React applications using Auth0 React SDK:
+```bash
+npm install @auth0/auth0-react
+```
 
-```typescript
+```tsx
 import { useAuth0 } from "@auth0/auth0-react";
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 import { useEffect, useRef } from "react";
+import type { VanillaChatInstance } from "@sunnyhealthai/agents-sdk";
 
-function ChatWidget() {
+export function AuthenticatedChat() {
   const { getIdTokenClaims, isAuthenticated } = useAuth0();
   const containerRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<VanillaChatInstance | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !containerRef.current) return;
 
     const initChat = async () => {
-      await createSunnyChat({
+      chatRef.current = await createSunnyChat({
         container: containerRef.current!,
         partnerIdentifier: "acme-health",
         publicKey: "pk-sunnyagents_abc_xyz",
@@ -307,19 +205,36 @@ function ChatWidget() {
     };
 
     initChat();
+
+    return () => {
+      chatRef.current?.destroy();
+    };
   }, [isAuthenticated, getIdTokenClaims]);
+
+  if (!isAuthenticated) {
+    return <div>Please log in to use chat</div>;
+  }
 
   return <div ref={containerRef} />;
 }
 ```
 
-### Firebase
+### Auth0 with Vanilla JavaScript
 
-```typescript
-import { getAuth } from "firebase/auth";
+```javascript
+import { createAuth0Client } from "@auth0/auth0-spa-js";
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const auth = getAuth();
+const auth0 = await createAuth0Client({
+  domain: "your-domain.auth0.com",
+  clientId: "your-client-id",
+});
+
+const isAuthenticated = await auth0.isAuthenticated();
+
+if (!isAuthenticated) {
+  await auth0.loginWithRedirect();
+}
 
 const chat = await createSunnyChat({
   container: document.getElementById("chat"),
@@ -327,11 +242,60 @@ const chat = await createSunnyChat({
   publicKey: "pk-sunnyagents_abc_xyz",
   authType: "tokenExchange",
   idTokenProvider: async () => {
-    const user = auth.currentUser;
-    if (!user) return null;
-    return await user.getIdToken();
+    const claims = await auth0.getIdTokenClaims();
+    return claims?.__raw || null;
   },
 });
+```
+
+### Firebase with React
+
+```bash
+npm install firebase
+```
+
+```tsx
+import { getAuth } from "firebase/auth";
+import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
+import { useEffect, useRef } from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
+import type { VanillaChatInstance } from "@sunnyhealthai/agents-sdk";
+
+const auth = getAuth();
+
+export function FirebaseChat() {
+  const [user, loading] = useAuthState(auth);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<VanillaChatInstance | null>(null);
+
+  useEffect(() => {
+    if (!user || loading || !containerRef.current) return;
+
+    const initChat = async () => {
+      chatRef.current = await createSunnyChat({
+        container: containerRef.current!,
+        partnerIdentifier: "acme-health",
+        publicKey: "pk-sunnyagents_abc_xyz",
+        authType: "tokenExchange",
+        idTokenProvider: async () => {
+          if (!user) return null;
+          return await user.getIdToken();
+        },
+      });
+    };
+
+    initChat();
+
+    return () => {
+      chatRef.current?.destroy();
+    };
+  }, [user, loading]);
+
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>Please log in</div>;
+
+  return <div ref={containerRef} />;
+}
 ```
 
 ### Custom provider
@@ -345,93 +309,39 @@ const chat = await createSunnyChat({
   publicKey: "pk-sunnyagents_abc_xyz",
   authType: "tokenExchange",
   idTokenProvider: async () => {
-    // Your custom logic to get ID token
-    const response = await fetch("/api/get-id-token");
-    const data = await response.json();
-    return data.idToken;
+    try {
+      const response = await fetch("/api/auth/token", {
+        credentials: "include",
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.idToken;
+    } catch (error) {
+      console.error("Failed to get ID token:", error);
+      return null;
+    }
   },
 });
 ```
 
-## Automatic token refresh
+## Token refresh
 
-The SDK automatically refreshes tokens when they expire:
+The SDK automatically refreshes tokens when they expire. No action is needed from your app. If your `idTokenProvider` needs to force-refresh, you can do so per provider:
 
+**Auth0:**
 ```typescript
-// Token is refreshed automatically
-// No action needed from your app
-```
-
-Token refresh happens:
-
-- Before token expiration
-- On authentication errors
-- When establishing new connections
-
-## Session management
-
-### Session storage
-
-The SDK manages session state internally. Use `sessionStorageKey` with the headless client for custom session IDs:
-
-```typescript
-const client = new SunnyAgentsClient({
-  sessionStorageKey: "my_app_session", // Custom key for session IDs
-  // ... other config
-});
-```
-
-### Session lifecycle
-
-1. **Create**: Session created on first connection
-2. **Store**: Session state managed in-memory
-3. **Reuse**: Session reused on reconnection
-4. **Expire**: Session expires after timeout
-5. **Refresh**: New session created when expired
-
-## Anonymous mode
-
-For applications that don't require authentication:
-
-```typescript
-const client = new SunnyAgentsClient({
-  createServerConversations: false, // Explicitly disable server persistence
-});
-```
-
-Or use the `anonymous` option with the widget:
-
-```typescript
-import { attachSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-attachSunnyChat({
-  container: document.getElementById("chat"),
-  config: {},
-  anonymous: true, // Enable anonymous mode
-});
-```
-
-## Error handling
-
-### Authentication errors
-
-```typescript
-try {
-  await client.sendMessage("Hello!");
-} catch (error) {
-  if (error.message.includes("token") || error.message.includes("auth")) {
-    // Handle authentication error
-    console.error("Authentication failed:", error);
-    // Redirect to login or show error message
-  }
+idTokenProvider: async () => {
+  const claims = await getIdTokenClaims({ cache: false });
+  return claims?.__raw || null;
 }
 ```
 
-### Token refresh errors
-
+**Firebase:**
 ```typescript
-// SDK handles token refresh automatically
-// If refresh fails, you'll get an authentication error
+idTokenProvider: async () => {
+  if (!user) return null;
+  return await user.getIdToken(true);
+}
 ```
 
 ## Best practices
@@ -439,63 +349,9 @@ try {
 1. **Secure storage**: Store ID tokens securely (not in localStorage for sensitive apps)
 2. **Error handling**: Always handle authentication errors
 3. **Token refresh**: Let SDK handle token refresh automatically
-4. **Session management**: Use custom session keys for multi-tenant apps
-5. **Anonymous mode**: Use anonymous mode for public-facing features
-
-## Examples
-
-### SAML/OIDC Authentication
-
-```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "saml",
-});
-```
-
-### Custom Token Exchange
-
-```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "tokenExchange",
-  idTokenProvider: async () => localStorage.getItem("id_token"),
-});
-```
-
-### Passwordless Authentication
-
-```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "passwordless",
-});
-```
-
-### Anonymous client
-
-```typescript
-import { SunnyAgentsClient } from "@sunnyhealthai/agents-sdk";
-
-const client = new SunnyAgentsClient({
-  createServerConversations: false,
-});
-```
 
 ## Next steps
 
-- **[Authentication Tutorial](/authentication-tutorial)** - Step-by-step authentication setup
-- **[Conversations](/conversations)** - Learn about conversation management
+- **[Key Concepts](/concepts)** - Understand events, state management, and MCP approvals
+- **[Artifacts](/artifacts)** - Parse and render rich content
 - **[Overview](/overview)** - Understand SDK architecture
