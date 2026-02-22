@@ -2,6 +2,7 @@
 
 instances:
   - url: sunnyhealth.docs.buildwithfern.com
+    custom-domain: docs.sunnyhealthai.com
 ai-search:
   location:
     - docs
@@ -10,53 +11,11 @@ layout:
   searchbar-placement: header
   page-width: full
   tabs-placement: header
-tabs:
-  home:
-    display-name: Docs
-    icon: home
-  guides:
-    display-name: Guides
-    icon: book
-  API Reference:
-    display-name: API Reference
-    icon: puzzle
-navigation:
-  - tab: home
-    layout:
-      - section: Get Started
-        contents:
-          - page: Welcome
-            path: docs/pages/welcome.mdx
-  - tab: guides
-    layout:
-      - section: Get started
-        contents:
-          - page: Overview
-            path: docs/pages/get-started/overview.mdx
-            icon: fa-duotone fa-book-open
-          - page: Partner Setup
-            path: docs/pages/get-started/partner-setup.mdx
-            icon: fa-duotone fa-key
-          - page: Quickstart
-            path: docs/pages/get-started/quickstart.mdx
-            icon: fa-duotone fa-rocket
-      - section: Guides
-        contents:
-          - page: Authentication
-            path: docs/pages/capabilities/authentication.mdx
-            icon: fa-duotone fa-lock
-          - page: Artifacts
-            path: docs/pages/capabilities/artifacts.mdx
-            icon: fa-duotone fa-box
-          - page: Key Concepts
-            path: docs/pages/concepts.mdx
-            icon: fa-duotone fa-lightbulb
-      - section: Changelog
-        contents:
-          - changelog: docs/changelog
-  - tab: API Reference
-    layout:
-      - api: API Reference
+products:
+  - display-name: Ask Sunny
+    path: ./products/ask-sunny.yml
+    icon: fa-solid fa-sun
+    slug: ask-sunny
 navbar-links:
   - type: minimal
     text: GitHub
