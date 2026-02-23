@@ -82,7 +82,7 @@ const chat = await createSunnyChat({
 
 ## Authentication flow
 
-When using `createSunnyChat`, auth configuration is fetched via **HTTP** from the [`/sdk/config`](/api-reference/authentication/get-sdk-config) endpoint _before_ any WebSocket connection is established:
+When using `createSunnyChat`, auth configuration is fetched via **HTTP** from the [`/sdk/config`](/api-reference/configuration/get-sdk-config) endpoint _before_ any WebSocket connection is established:
 
 ```mermaid
 sequenceDiagram
@@ -103,7 +103,7 @@ sequenceDiagram
         SDK->>App: Call idTokenProvider
         App-->>SDK: ID token
     else Passwordless
-        Note over SDK: Verification UI rendered on first message
+        Note over SDK: User chats anonymously; verification UI appears when AI prompts
     end
 
     Note over SDK: WebSocket connects when user sends first message

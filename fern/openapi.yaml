@@ -15,8 +15,10 @@ info:
     - **MCP Approvals**: Handle tool execution approvals interactively for secure healthcare operations
     
     ### Authentication
-    The SDK supports two modes:
-    - **Authenticated Mode**: Uses token exchange to convert ID tokens to access tokens
+    The SDK supports multiple authentication modes:
+    - **SAML/OIDC**: Enterprise SSO via Auth0 with automatic popup login
+    - **Token Exchange**: Convert partner-provided ID tokens to access tokens
+    - **Passwordless**: Email or SMS-based OTP authentication without passwords
     - **Anonymous Mode**: Local-only conversations without server persistence
     
     ### Developer Notes
