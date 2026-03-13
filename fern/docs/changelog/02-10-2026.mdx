@@ -8,7 +8,7 @@ tags: ["authentication", "createSunnyChat", "breaking-change", "v0.0.14"]
 
 ### Server-driven auth configuration for `createSunnyChat`
 
-The `createSunnyChat` API now uses **server-driven authentication configuration**. Instead of passing Auth0 details (domain, clientId, connection) directly, you provide three required parameters and the server supplies all auth configuration automatically via `sdk.session.create`.
+The `createSunnyChat` API now uses **server-driven authentication configuration**. Instead of passing Auth0 details (domain, clientId, connection) directly, you provide three required parameters and the server supplies all auth configuration automatically via the HTTP `GET /sdk/config` endpoint.
 
 **Before (v0.0.11):**
 

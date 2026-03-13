@@ -1,0 +1,55 @@
+---
+title: February 22, 2026
+slug: 02-22-2026
+tags: ["v0.0.17", "profile-sync", "customization"]
+---
+
+## Version 0.0.17
+
+### New features
+
+#### Dependents sync
+
+`authUpgradeProfileSync` now accepts a `dependents` array to sync family members covered under the user's insurance. Each dependent can be linked to a specific insurance plan by index.
+
+```typescript
+authUpgradeProfileSync: {
+  insurances: [
+    { partner_plan_id: "plan-uuid", member_id: "M001", group_id: "G100" },
+  ],
+  dependents: [
+    {
+      first_name: "Alex",
+      last_name: "Doe",
+      date_of_birth: "2015-06-01",
+      relationship_code: "19", // child
+      insurance_index: 0,
+    },
+  ],
+}
+```
+
+New exported type: `AuthUpgradeDependent`. See the [Profile Sync](/profile-sync) guide for full details.
+
+#### UI configuration options
+
+`createSunnyChat` and `attachSunnyChat` now accept `fontSize`, `fontFamily`, and `dimensions` for widget customization:
+
+```typescript
+const chat = await createSunnyChat({
+  // ...
+  fontSize: "14px",
+  fontFamily: "'Inter', sans-serif",
+  dimensions: {
+    width: "1200px",
+    height: "800px",
+    triggerMaxWidth: "500px",
+  },
+});
+```
+
+New exported type: `VanillaChatDimensions`.
+
+### Internal changes
+
+- Removed deprecated internal function. No public API changes.
