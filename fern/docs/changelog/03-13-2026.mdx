@@ -1,0 +1,20 @@
+---
+title: March 13, 2026
+slug: 03-13-2026
+tags: ["v0.0.19", "breaking-change", "authentication"]
+---
+
+## Version 0.0.19
+
+### Breaking changes
+
+#### Simplified authentication surface
+
+SAML and OIDC authentication types have been removed. The SDK now supports two auth modes:
+
+- **Passwordless** — Email or SMS-based authentication rendered in-chat
+- **Token Exchange** — Use your existing auth provider (Auth0, Firebase, custom) and exchange ID tokens
+
+`SdkAuthType` is now `'passwordless' | 'tokenExchange'`.
+
+**Migration:** If you were using `authType: "saml"` or `authType: "oidc"`, switch to `authType: "tokenExchange"` with an `idTokenProvider` that returns your Auth0/OIDC ID token. The token exchange flow handles the same authentication — you just provide the token yourself instead of the SDK opening a popup.

@@ -4,32 +4,9 @@ subtitle: Secure token exchange and session management
 slug: authentication
 ---
 
-The Sunny Agents SDK supports multiple authentication modes: SAML/OIDC via Auth0, custom token exchange, and passwordless authentication. With `createSunnyChat`, all authentication configuration is **server-driven** -- you only specify the auth type and the server provides the necessary Auth0 details automatically.
+The Sunny Agents SDK supports two authentication modes: custom token exchange and passwordless authentication. With `createSunnyChat`, all authentication configuration is **server-driven** -- you only specify the auth type and the server provides the necessary details automatically.
 
 ## Authentication modes
-
-### SAML/OIDC Authentication (Recommended)
-
-For enterprise applications using SAML or OIDC authentication via Auth0:
-
-```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "saml", // or "oidc"
-});
-```
-
-**Features:**
-
-- Automatic authentication via popup
-- No manual token management
-- Server-persisted conversations
-- Enterprise SSO support
-- Modal overlay option for native feel
 
 ### Custom Token Exchange
 
@@ -90,16 +67,12 @@ sequenceDiagram
     participant SDK
     participant ConfigAPI as /sdk/config
     participant WebSocket
-    participant Auth0
 
     App->>SDK: createSunnyChat with partnerIdentifier, publicKey, authType
     SDK->>ConfigAPI: GET /sdk/config (partner + API key headers)
-    ConfigAPI-->>SDK: SdkAuthConfig (Auth0 domain, clientId, connection, etc.)
+    ConfigAPI-->>SDK: SdkAuthConfig (clientId, audience, token exchange URL)
 
-    alt SAML/OIDC
-        SDK->>Auth0: Trigger login popup
-        Auth0-->>SDK: ID token
-    else Token Exchange
+    alt Token Exchange
         SDK->>App: Call idTokenProvider
         App-->>SDK: ID token
     else Passwordless
@@ -112,14 +85,6 @@ sequenceDiagram
 ```
 
 ### Step-by-step
-
-**SAML/OIDC:**
-1. **Create chat**: Call `createSunnyChat` with `authType: "saml"` or `"oidc"`
-2. **Fetch config**: SDK calls `GET /sdk/config` to retrieve Auth0 settings
-3. **Auto-login**: SDK automatically triggers Auth0 authentication popup
-4. **First message**: WebSocket connects when the user sends a message
-5. **Upgrade auth**: SDK sends `auth.upgrade` message with ID token
-6. **Authenticated**: SDK receives `auth.upgraded` response
 
 **Token Exchange:**
 1. **Create chat**: Call `createSunnyChat` with `authType: "tokenExchange"`
@@ -138,7 +103,7 @@ interface UnifiedSunnyChatOptions {
   container: HTMLElement;              // Required: DOM element for the chat UI
   partnerIdentifier: string;           // Required: Your partner name
   publicKey: string;                   // Required: API key (pk-sunnyagents_...)
-  authType: SdkAuthType;               // Required: "passwordless" | "saml" | "oidc" | "tokenExchange"
+  authType: SdkAuthType;               // Required: "passwordless" | "tokenExchange"
   idTokenProvider?: () => Promise<string | null>; // Required for tokenExchange
   authUpgradeProfileSync?: AuthUpgradeProfileSyncData | (() => Promise<...>); // Pre-populate user data
   websocketUrl?: string;               // Override WebSocket URL (default: wss://chat.api.sunnyhealthai-staging.com)
@@ -161,10 +126,7 @@ const chat = await createSunnyChat({
   authType: "passwordless",
 });
 
-// Later, switch to SAML authentication
-await chat.setAuthType("saml");
-
-// Or switch to token exchange with a custom provider
+// Later, switch to token exchange with a custom provider
 await chat.setAuthType("tokenExchange", {
   idTokenProvider: async () => getMyToken(),
 });

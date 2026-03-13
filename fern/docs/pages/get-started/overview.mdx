@@ -29,7 +29,7 @@ The SDK is designed specifically for healthcare applications:
 
 <CardGroup cols={2}>
   <Card title="Authentication" icon="duotone lock" href="/authentication">
-    Multiple authentication methods: SAML/OIDC via Auth0, custom token exchange, and passwordless email/SMS. Automatic token management and refresh.
+    Two authentication methods: custom token exchange and passwordless email/SMS. Automatic token management and refresh.
   </Card>
   <Card title="Profile Sync" icon="duotone arrows-rotate" href="/profile-sync">
     Pre-populate user profiles, addresses, insurance, and dependents during authentication. Supports static data and async providers.
@@ -47,7 +47,7 @@ The SDK is designed specifically for healthcare applications:
 
 ## Partner setup
 
-`publicKey` and `partnerIdentifier` are obtained from **Sunny Central**, the partner portal. Sign in at [platform.sunnyhealthai.com](https://platform.sunnyhealthai.com) (production) or [platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com) (staging), then go to **Developer Tools** to create API keys, view your partner name, and configure authentication (allowed domains, token exchange, or SAML/OIDC). See [Partner Setup](/partner-setup) for details.
+`publicKey` and `partnerIdentifier` are obtained from **Sunny Central**, the partner portal. Sign in at [platform.sunnyhealthai.com](https://platform.sunnyhealthai.com) (production) or [platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com) (staging), then go to **Developer Tools** to create API keys, view your partner name, and configure authentication (allowed domains and token exchange). See [Partner Setup](/partner-setup) for details.
 
 ## How it works
 
@@ -61,13 +61,11 @@ graph TD
     C --> D[Server Auth Config]
 
     D --> E{Auth Type}
-    E -->|SAML/OIDC| F[Auth0 Popup]
-    E -->|Token Exchange| G[Exchange ID Token]
-    E -->|Passwordless| H[Email/SMS OTP]
+    E -->|Token Exchange| F[Exchange ID Token]
+    E -->|Passwordless| G[Email/SMS OTP]
 
     F --> I[User Sends Message]
     G --> I
-    H --> I
 
     I --> J[WebSocket Connect + auth.upgrade]
     J --> K[auth.upgraded]
@@ -87,7 +85,7 @@ const chat = await createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "saml", // or "passwordless", "oidc", "tokenExchange"
+  authType: "passwordless", // or "tokenExchange"
 });
 
 // Access the underlying client for programmatic control
@@ -99,20 +97,7 @@ chat.destroy();
 
 ## Authentication modes
 
-The SDK supports three authentication methods. You specify the `authType` and the SDK handles everything else using server-provided configuration:
-
-### SAML/OIDC Authentication (Recommended for Enterprise)
-
-Automatic authentication via Auth0 with SAML or OIDC. The SDK triggers a popup login automatically:
-
-```typescript
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "saml", // or "oidc"
-});
-```
+The SDK supports two authentication methods. You specify the `authType` and the SDK handles everything else using server-provided configuration:
 
 ### Custom Token Exchange
 

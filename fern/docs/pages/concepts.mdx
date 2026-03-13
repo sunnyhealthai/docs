@@ -79,20 +79,7 @@ Artifacts are delivered inline in message text via the WebSocket. The backend ex
 
 ## Authentication
 
-The SDK supports three authentication modes, all configured through `createSunnyChat`:
-
-### SAML/OIDC (Enterprise SSO)
-
-Automatic authentication via Auth0 SAML or OIDC connections. Triggers a popup login automatically:
-
-```typescript
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "saml", // or "oidc"
-});
-```
+The SDK supports two authentication modes, both configured through `createSunnyChat`:
 
 ### Token Exchange
 

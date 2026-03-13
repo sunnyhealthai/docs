@@ -262,7 +262,7 @@ const chat = await createSunnyChat({
 
 - **Upsert semantics** -- the backend creates new records or updates existing ones. Existing data not covered by the payload is left unchanged.
 - **Dependent deduplication** -- dependents are matched by natural key (first name + last name + date of birth). Sending the same dependent twice updates the existing record rather than creating a duplicate.
-- **Auth mode compatibility** -- profile sync works with all authentication modes (SAML/OIDC, token exchange, and passwordless).
+- **Auth mode compatibility** -- profile sync works with all authentication modes (token exchange and passwordless).
 - **Timing** -- the async provider is called at authentication time, just before the `auth.upgrade` message is sent. This ensures data is as fresh as possible.
 
 ## Next steps

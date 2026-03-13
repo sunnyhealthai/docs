@@ -76,19 +76,6 @@ Open your HTML file in a browser and start chatting! The widget will automatical
 
 Choose the authentication mode that fits your application:
 
-**SAML/OIDC Authentication (Recommended for Enterprise):**
-
-```typescript
-import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
-
-const chat = await createSunnyChat({
-  container: document.getElementById("chat"),
-  partnerIdentifier: "acme-health",
-  publicKey: "pk-sunnyagents_abc_xyz",
-  authType: "saml", // or "oidc"
-});
-```
-
 **Custom Token Exchange:**
 
 ```typescript

@@ -12,7 +12,7 @@ Sunny Central is the partner portal for configuring your Sunny Agents integratio
 
 - **API keys** — Create and revoke public keys (`pk-sunnyagents_...`) for your app
 - **Partner name** — Your unique partner identifier used as `partnerIdentifier` in the SDK
-- **SDK auth configuration** — Auth0 domain, client ID, token exchange URL for SAML/OIDC and token exchange
+- **SDK auth configuration** — Client ID, token exchange URL for authenticated sessions
 - **Allowed domains** — CORS origins where your app can embed the chat (required for passwordless)
 - **CTE profiles** — Custom Token Exchange configuration for partner-specific auth flows
 
@@ -48,10 +48,9 @@ The auth type you can use depends on your Sunny Central configuration:
 |-----------|----------------|
 | **Passwordless** | API key created + at least one allowed domain configured |
 | **Token exchange** | Your org must have token exchange configured in Sunny Central. The SDK fetches these params from the server—you only provide `idTokenProvider`. |
-| **SAML/OIDC** | Your org must have SAML/OIDC configured in Sunny Central. The SDK fetches all auth params from the server automatically. |
 
 - **Allowed domains**: Add your app's origins (e.g. `https://myapp.com`) in **Developer Tools** → **Allowed Domains**. Required for passwordless auth.
-- **Token exchange and SAML/OIDC**: Contact your Sunny Health representative to configure these in Sunny Central. Once configured, the SDK fetches everything remotely—no params to pass in code.
+- **Token exchange**: Contact your Sunny Health representative to configure token exchange in Sunny Central. Once configured, the SDK fetches everything remotely—no params to pass in code.
 
 ## Next steps
 
