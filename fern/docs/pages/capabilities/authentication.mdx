@@ -110,7 +110,16 @@ interface UnifiedSunnyChatOptions {
   headerTitle?: string;                // Chat header title (default: "Sunny Agents")
   placeholder?: string;                // Input placeholder (default: "Ask anything...")
   colors?: VanillaChatColors;         // Theme colors
+  fontSize?: string;                   // Base font size (default: "14px")
+  fontFamily?: string;                 // Font family (default: "Lato")
+  dimensions?: VanillaChatDimensions;  // Widget dimensions (see below)
   devRoute?: string;                   // Developer route for token exchange
+}
+
+interface VanillaChatDimensions {
+  width?: string;           // Modal width when expanded (default: "1390px")
+  height?: string;          // Modal height when expanded (default: "980px")
+  triggerMaxWidth?: string;  // Max width of collapsed trigger bar (default: "600px")
 }
 ```
 
@@ -289,7 +298,9 @@ const chat = await createSunnyChat({
 
 ## Token refresh
 
-The SDK automatically refreshes tokens when they expire. No action is needed from your app. If your `idTokenProvider` needs to force-refresh, you can do so per provider:
+The SDK automatically refreshes tokens before they expire using a **check-on-send** strategy: before every outgoing message, the SDK checks the access token's JWT `exp` claim and, if the token is within 5 minutes of expiry, requests a fresh ID token from your `idTokenProvider`, exchanges it for a new access token, and sends an `auth.refresh` message to the server -- all before the user's message is sent. No timers or background polling are involved; refresh only happens when the user is actively sending messages.
+
+No action is needed from your app. If your `idTokenProvider` needs to force-refresh, you can do so per provider:
 
 **Auth0:**
 ```typescript

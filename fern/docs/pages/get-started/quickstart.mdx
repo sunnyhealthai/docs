@@ -92,9 +92,19 @@ const chat = await createSunnyChat({
 });
 ```
 
+## Return value
+
+`createSunnyChat` returns a `VanillaChatInstance` with these members:
+
+| Member | Description |
+|--------|-------------|
+| `client` | The underlying client for programmatic control (events, sending messages, state) |
+| `destroy()` | Unmount the widget and close the WebSocket connection |
+| `setAuthType(authType, opts?)` | Switch authentication mode at runtime (see [Authentication](/authentication#runtime-auth-type-switching)) |
+
 ## Programmatic control
 
-`createSunnyChat` returns a chat instance with a `client` property for programmatic access:
+Use the `client` property for programmatic access:
 
 ```typescript
 const chat = await createSunnyChat({
@@ -141,6 +151,11 @@ const chat = await createSunnyChat({
   },
   fontSize: "14px",
   fontFamily: "'Inter', sans-serif",
+  dimensions: {
+    width: "1200px",    // Modal width (default: 1390px)
+    height: "800px",    // Modal height (default: 980px)
+    triggerMaxWidth: "500px", // Collapsed bar max-width (default: 600px)
+  },
 });
 ```
 

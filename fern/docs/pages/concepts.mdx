@@ -118,7 +118,7 @@ const chat = await createSunnyChat({
 The SDK manages WebSocket connections automatically:
 
 1. **Config fetch**: `createSunnyChat` calls `GET /sdk/config` to retrieve auth settings
-2. **Auth activation**: SDK activates the chosen auth mode (popup, token exchange, or passwordless)
+2. **Auth activation**: SDK activates the chosen auth mode (token exchange or passwordless)
 3. **Connection**: WebSocket connects when the user sends their first message
 4. **Authentication**: SDK sends `auth.upgrade` message with credentials
 5. **Messaging**: Send/receive messages in real-time

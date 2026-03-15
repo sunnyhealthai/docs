@@ -1,0 +1,30 @@
+---
+title: March 15, 2026
+slug: 03-15-2026
+tags: ["v0.0.20", "v0.0.21", "v0.0.22", "v0.0.23", "authentication"]
+---
+
+## Version 0.0.23
+
+### New features
+
+#### Automatic token refresh (check-on-send)
+
+The SDK now automatically refreshes authentication tokens before they expire. Before every outgoing message, the SDK checks the access token's JWT `exp` claim and refreshes it if within 5 minutes of expiry. This prevents sessions from losing authentication during long conversations.
+
+No action is needed from your app -- this works transparently with any `idTokenProvider`.
+
+### Bug fixes
+
+- Fixed auth state tracking for server-side conversation creation during token exchange flows.
+- Fixed conversation persistence toggling when switching auth types at runtime.
+
+---
+
+## Version 0.0.20
+
+### New features
+
+#### Phone input country codes
+
+The passwordless SMS authentication UI now includes a country code selector with E.164 format support, allowing users outside the US to enter phone numbers with their country prefix.

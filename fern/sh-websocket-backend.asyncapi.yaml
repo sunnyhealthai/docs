@@ -88,6 +88,7 @@ channels:
           - $ref: "#/components/messages/AppointmentList"
           - $ref: "#/components/messages/AppointmentGet"
           - $ref: "#/components/messages/AuthUpgrade"
+          - $ref: "#/components/messages/AuthRefresh"
           - $ref: "#/components/messages/PasswordlessStart"
           - $ref: "#/components/messages/PasswordlessVerify"
           - $ref: "#/components/messages/SdkSessionCreate"
@@ -103,6 +104,8 @@ channels:
           # Auth
           - $ref: "#/components/messages/AuthUpgraded"
           - $ref: "#/components/messages/AuthUpgradeFailed"
+          - $ref: "#/components/messages/AuthRefreshed"
+          - $ref: "#/components/messages/AuthRefreshFailed"
           - $ref: "#/components/messages/PasswordlessOtpSent"
           - $ref: "#/components/messages/PasswordlessOtpSentFailed"
           - $ref: "#/components/messages/PasswordlessVerifyFailed"
@@ -233,6 +236,17 @@ components:
       payload:
         $ref: "#/components/schemas/AuthUpgradePayload"
 
+    AuthRefresh:
+      name: auth.refresh
+      title: Refresh Authentication Token
+      summary: |
+        Refresh the authentication token for an already-authenticated session.
+        Sent by the SDK when the current access token is near expiry.
+        Server responds with `auth.refreshed` or `auth.refresh_failed`.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AuthRefreshPayload"
+
     PasswordlessStart:
       name: passwordless.start
       title: Start Passwordless OTP
@@ -307,6 +321,22 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/AuthUpgradeFailedPayload"
+
+    AuthRefreshed:
+      name: auth.refreshed
+      title: Token Refreshed
+      summary: Authentication token refresh succeeded.
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AuthRefreshedPayload"
+
+    AuthRefreshFailed:
+      name: auth.refresh_failed
+      title: Token Refresh Failed
+      summary: Authentication token refresh failed (invalid token, not authenticated, etc.).
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/AuthRefreshFailedPayload"
 
     PasswordlessOtpSent:
       name: passwordless.otp_sent
@@ -809,6 +839,39 @@ components:
             `ADDRESS_SAVE_FAILED`, `INSURANCE_SAVE_FAILED`,
             `DEPENDENT_SAVE_FAILED`, `PARTNER_REQUIRED`.
 
+    AuthRefreshPayload:
+      type: object
+      required: [type, token]
+      properties:
+        type:
+          type: string
+          const: auth.refresh
+        token:
+          type: string
+          description: Fresh access token to replace the expiring one.
+
+    AuthRefreshedPayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: auth.refreshed
+
+    AuthRefreshFailedPayload:
+      type: object
+      required: [type, error, code]
+      properties:
+        type:
+          type: string
+          const: auth.refresh_failed
+        error:
+          type: string
+        code:
+          type: string
+          description: |
+            Error codes: `INVALID_TOKEN`, `NOT_AUTHENTICATED`, `INTERNAL_ERROR`.
+
     PasswordlessOtpSentPayload:
       type: object
       required: [type, connection]
@@ -1238,18 +1301,10 @@ components:
       type: object
       description: Server-provided auth configuration returned in `sdk.session.created`. Public fields only.
       properties:
-        auth0_domain:
-          type: string
-          nullable: true
-          description: "Auth0 tenant domain (e.g., `your-tenant.auth0.com`). Used by SAML/OIDC."
         auth0_client_id:
           type: string
           nullable: true
-          description: SPA client ID (public, no secret). Used by SAML/OIDC and token exchange.
-        auth0_connection:
-          type: string
-          nullable: true
-          description: SAML/OIDC connection name.
+          description: Auth0 SPA client ID (public, no secret). Used by token exchange.
         audience:
           type: string
           nullable: true
