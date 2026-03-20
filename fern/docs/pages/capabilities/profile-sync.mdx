@@ -32,7 +32,7 @@ Pass `authUpgradeProfileSync` to `createSunnyChat`. You can provide static data 
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -61,7 +61,7 @@ const chat = await createSunnyChat({
 Use a function when the data needs to be fetched at authentication time -- for example, from your own API:
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -217,7 +217,7 @@ A complete example syncing all data types with an async provider:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",

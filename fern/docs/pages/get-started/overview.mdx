@@ -81,7 +81,7 @@ Provide your partner identifier, public key, and auth type -- all authentication
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -104,7 +104,7 @@ The SDK supports two authentication methods. You specify the `authType` and the 
 For applications with their own authentication (Auth0, Firebase, custom providers):
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -120,7 +120,7 @@ const chat = await createSunnyChat({
 Email or SMS-based authentication without passwords. The SDK renders a verification UI in the chat automatically:
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",

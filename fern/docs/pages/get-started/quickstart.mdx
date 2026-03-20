@@ -50,7 +50,7 @@ Create an HTML file and add a container for the chat widget:
   <script type="module">
     import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-    const chat = await createSunnyChat({
+    const chat = createSunnyChat({
       container: document.getElementById("sunny-chat"),
       partnerIdentifier: "acme-health",
       publicKey: "pk-sunnyagents_abc_xyz",
@@ -81,7 +81,7 @@ Choose the authentication mode that fits your application:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -107,7 +107,7 @@ const chat = await createSunnyChat({
 Use the `client` property for programmatic access:
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -137,7 +137,7 @@ chat.destroy();
 Customize the widget's appearance:
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -173,16 +173,12 @@ export function ChatWidget() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const init = async () => {
-      chatRef.current = await createSunnyChat({
-        container: containerRef.current!,
-        partnerIdentifier: "acme-health",
-        publicKey: "pk-sunnyagents_abc_xyz",
-        authType: "passwordless",
-      });
-    };
-
-    init();
+    chatRef.current = createSunnyChat({
+      container: containerRef.current!,
+      partnerIdentifier: "acme-health",
+      publicKey: "pk-sunnyagents_abc_xyz",
+      authType: "passwordless",
+    });
 
     return () => {
       chatRef.current?.destroy();

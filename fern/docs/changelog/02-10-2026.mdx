@@ -13,7 +13,7 @@ The `createSunnyChat` API now uses **server-driven authentication configuration*
 **Before (v0.0.11):**
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   auth: {
     type: "saml",
@@ -28,7 +28,7 @@ const chat = await createSunnyChat({
 **After (v0.0.14):**
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -62,7 +62,7 @@ The following types have been removed:
 `createSunnyChat` now returns a `VanillaChatInstance` with a `setAuthType` method for switching authentication types at runtime:
 
 ```typescript
-const chat = await createSunnyChat({ /* ... */ });
+const chat = createSunnyChat({ /* ... */ });
 await chat.setAuthType("saml");
 await chat.setAuthType("tokenExchange", {
   idTokenProvider: async () => getMyToken(),

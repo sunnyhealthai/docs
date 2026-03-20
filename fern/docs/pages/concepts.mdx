@@ -91,7 +91,7 @@ For applications with custom authentication providers. Your app provides an ID t
 4. Token is automatically refreshed when expired
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -105,7 +105,7 @@ const chat = await createSunnyChat({
 Email or SMS-based authentication without passwords. The SDK renders a verification UI in the chat:
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -137,7 +137,7 @@ The SDK uses an event-driven architecture. Subscribe to events via `chat.client`
 - **`quickResponses`**: Quick response suggestions available
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",

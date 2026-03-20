@@ -1,0 +1,37 @@
+---
+title: March 19, 2026
+slug: 03-19-2026
+tags: ["v0.0.39", "authentication", "breaking change"]
+---
+
+## Version 0.0.39
+
+### Breaking changes
+
+#### Synchronous `createSunnyChat`
+
+`createSunnyChat` now returns a `VanillaChatInstance` directly instead of a `Promise<VanillaChatInstance>`. Remove `await` from all call sites:
+
+**Before:**
+```typescript
+const chat = await createSunnyChat({ ... });
+```
+
+**After:**
+```typescript
+const chat = createSunnyChat({ ... });
+```
+
+<Note>
+TypeScript consumers using `Awaited<ReturnType<typeof createSunnyChat>>` should update to `ReturnType<typeof createSunnyChat>`. Calling `await` on a non-Promise is harmless at runtime, but TypeScript will flag the unnecessary `Awaited` wrapper.
+</Note>
+
+### New features
+
+#### Proactive authentication for token exchange
+
+For `tokenExchange` users, the SDK now connects to the WebSocket and authenticates **immediately on initialization** -- in the background, without blocking the UI. Previously, authentication was deferred until the user sent their first message, causing a noticeable delay. Now the first message sends instantly.
+
+#### Send button loading spinner
+
+While the SDK connects and authenticates in the background, the send button displays a minimalistic loading spinner. Once the connection is authenticated and ready, the spinner transitions to the standard send arrow icon. This replaces the previous full-UI loading state with a lightweight, non-blocking indicator.

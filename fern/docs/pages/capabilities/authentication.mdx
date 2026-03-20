@@ -15,7 +15,7 @@ For applications with custom authentication providers:
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -40,7 +40,7 @@ Email or SMS-based authentication without passwords. The SDK renders a verificat
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -69,32 +69,36 @@ sequenceDiagram
     participant WebSocket
 
     App->>SDK: createSunnyChat with partnerIdentifier, publicKey, authType
+    SDK-->>App: Returns VanillaChatInstance immediately
+
     SDK->>ConfigAPI: GET /sdk/config (partner + API key headers)
     ConfigAPI-->>SDK: SdkAuthConfig (clientId, audience, token exchange URL)
 
-    alt Token Exchange
+    alt Token Exchange (proactive auth)
+        SDK->>WebSocket: Connect in background
+        WebSocket-->>SDK: session.started + sdk.session.created
         SDK->>App: Call idTokenProvider
         App-->>SDK: ID token
+        SDK->>WebSocket: auth.upgrade with access token
+        WebSocket-->>SDK: auth.upgraded (send button spinner → send arrow)
     else Passwordless
         Note over SDK: User chats anonymously; verification UI appears when AI prompts
+        Note over SDK: WebSocket connects when user sends first message
     end
-
-    Note over SDK: WebSocket connects when user sends first message
-    SDK->>WebSocket: Connect + auth.upgrade
-    WebSocket-->>SDK: auth.upgraded
 ```
 
 ### Step-by-step
 
 **Token Exchange:**
-1. **Create chat**: Call `createSunnyChat` with `authType: "tokenExchange"`
-2. **Fetch config**: SDK calls `GET /sdk/config` to retrieve token exchange settings
-3. **First message**: WebSocket connects when the user sends a message
-4. **Provide ID token**: Your app provides an ID token via `idTokenProvider`
+1. **Create chat**: Call `createSunnyChat` with `authType: "tokenExchange"` — returns immediately
+2. **Fetch config**: SDK calls `GET /sdk/config` to retrieve token exchange settings (background)
+3. **Proactive connect**: SDK connects WebSocket and establishes SDK session in the background
+4. **Provide ID token**: SDK calls your `idTokenProvider` to get the ID token
 5. **Exchange token**: SDK exchanges ID token for access token
 6. **Upgrade auth**: SDK sends `auth.upgrade` message with access token
-7. **Authenticated**: SDK receives `auth.upgraded` response
-8. **Refresh**: SDK automatically refreshes token when expired
+7. **Authenticated**: SDK receives `auth.upgraded` response — send button spinner becomes send arrow
+8. **First message**: User sends a message — no waiting, auth is already complete
+9. **Refresh**: SDK automatically refreshes token when expired
 
 ## Configuration options
 
@@ -128,7 +132,7 @@ interface VanillaChatDimensions {
 You can switch the authentication type at runtime:
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -163,20 +167,16 @@ export function AuthenticatedChat() {
   useEffect(() => {
     if (!isAuthenticated || !containerRef.current) return;
 
-    const initChat = async () => {
-      chatRef.current = await createSunnyChat({
-        container: containerRef.current!,
-        partnerIdentifier: "acme-health",
-        publicKey: "pk-sunnyagents_abc_xyz",
-        authType: "tokenExchange",
-        idTokenProvider: async () => {
-          const claims = await getIdTokenClaims();
-          return claims?.__raw || null;
-        },
-      });
-    };
-
-    initChat();
+    chatRef.current = createSunnyChat({
+      container: containerRef.current!,
+      partnerIdentifier: "acme-health",
+      publicKey: "pk-sunnyagents_abc_xyz",
+      authType: "tokenExchange",
+      idTokenProvider: async () => {
+        const claims = await getIdTokenClaims();
+        return claims?.__raw || null;
+      },
+    });
 
     return () => {
       chatRef.current?.destroy();
@@ -208,7 +208,7 @@ if (!isAuthenticated) {
   await auth0.loginWithRedirect();
 }
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -243,20 +243,16 @@ export function FirebaseChat() {
   useEffect(() => {
     if (!user || loading || !containerRef.current) return;
 
-    const initChat = async () => {
-      chatRef.current = await createSunnyChat({
-        container: containerRef.current!,
-        partnerIdentifier: "acme-health",
-        publicKey: "pk-sunnyagents_abc_xyz",
-        authType: "tokenExchange",
-        idTokenProvider: async () => {
-          if (!user) return null;
-          return await user.getIdToken();
-        },
-      });
-    };
-
-    initChat();
+    chatRef.current = createSunnyChat({
+      container: containerRef.current!,
+      partnerIdentifier: "acme-health",
+      publicKey: "pk-sunnyagents_abc_xyz",
+      authType: "tokenExchange",
+      idTokenProvider: async () => {
+        if (!user) return null;
+        return await user.getIdToken();
+      },
+    });
 
     return () => {
       chatRef.current?.destroy();
@@ -275,7 +271,7 @@ export function FirebaseChat() {
 ```typescript
 import { createSunnyChat } from "@sunnyhealthai/agents-sdk";
 
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
@@ -323,7 +319,7 @@ idTokenProvider: async () => {
 You can pre-populate user data (profile, address, insurance, and dependents) during authentication by passing `authUpgradeProfileSync` to `createSunnyChat`. This data is sent alongside the `auth.upgrade` message, so the user doesn't need to re-enter information your application already has.
 
 ```typescript
-const chat = await createSunnyChat({
+const chat = createSunnyChat({
   container: document.getElementById("chat"),
   partnerIdentifier: "acme-health",
   publicKey: "pk-sunnyagents_abc_xyz",
