@@ -159,6 +159,39 @@ const chat = createSunnyChat({
 });
 ```
 
+## Concierge mode
+
+By default the widget renders a collapsed trigger bar that opens a modal. Switch to a full-panel **concierge layout** with intro copy, prompt chips, and an inline trigger by setting `displayMode: "concierge"`:
+
+```typescript
+const chat = createSunnyChat({
+  container: document.getElementById("chat"),
+  partnerIdentifier: "acme-health",
+  publicKey: "pk-sunnyagents_abc_xyz",
+  authType: "passwordless",
+  displayMode: "concierge",
+  concierge: {
+    introText:
+      "I'm your Care Concierge. I can help you book appointments and find providers.",
+    introStrongText: "Give it a try.",
+    suggestions: [
+      "I need a dental cleaning",
+      "I need to see a specialist",
+      { label: "View or change my appointment", emphasis: "primary" },
+    ],
+    align: "left", // or "center"
+  },
+});
+```
+
+Each suggestion entry is either a plain string (used as both label and prompt) or a `VanillaChatPromptSuggestion`:
+
+| Field      | Description                                                            |
+| ---------- | ---------------------------------------------------------------------- |
+| `label`    | Text shown on the chip                                                 |
+| `prompt`   | Optional prompt sent on click (defaults to `label`)                    |
+| `emphasis` | `"primary"` renders a solid, conspicuous call-to-action chip           |
+
 ## React example
 
 ```tsx title="ChatWidget.tsx"
