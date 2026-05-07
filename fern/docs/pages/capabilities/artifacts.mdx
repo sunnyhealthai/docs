@@ -176,6 +176,22 @@ artifacts.forEach(({ item_type, item_content }) => {
 });
 ```
 
+## Scheduling progress artifact
+
+The `scheduling_progress` artifact is a pinned progress indicator emitted during multi-step flows such as appointment scheduling and cancellation. The widget renders the latest emission as a progress bar at the top of the chat modal and hides the tag from the inline message bubble.
+
+```typescript
+interface SchedulingProgressArtifact {
+  current_step: number;   // 1-indexed
+  total_steps: number;
+  step_label?: string;     // e.g. "Insurance details"
+  flow?: string;           // e.g. "schedule" or "cancel"
+  completed?: boolean;     // when true, the SDK hides the progress bar
+}
+```
+
+Latest emission wins — the agent updates the bar by emitting a new `scheduling_progress` artifact, and closes the flow by emitting one with `completed: true`. The progress tag is consumed by the widget; if you parse messages yourself with `parseEmbeddedArtifacts`, filter it out before rendering.
+
 ## Rendering artifacts
 
 The `createSunnyChat` widget automatically parses and renders doctor profiles and provider search results from message text:

@@ -1,0 +1,91 @@
+---
+title: May 4, 2026
+slug: 05-04-2026
+tags: ["v0.0.55", "v0.0.54", "v0.0.53", "v0.0.52", "v0.0.50", "v0.0.49", "v0.0.48", "v0.0.47", "v0.0.45"]
+---
+
+This changelog covers SDK versions 0.0.40 through 0.0.55, accumulated since the [March 19, 2026 release](./03-19-2026).
+
+## Version 0.0.55
+
+### Bugfixes
+
+#### Send gating while assistant is streaming
+
+The modal send button, trigger send button, and suggestion chips are now disabled while the assistant is mid-response. Additional user messages sent during a stream weren't being incorporated into the in-flight reply, so the SDK now blocks the send action until streaming completes. Typing remains enabled so users can prepare their next message.
+
+## Version 0.0.54
+
+### Bugfixes
+
+#### Verification phone region select
+
+Reset the success state when the user switches between phone and email verification, and narrowed the phone region (country code) select on desktop. The select now uses 56px width with `text-overflow: ellipsis`, addressing a layout regression where the select was disproportionately wide compared to the adjacent email field.
+
+## Version 0.0.53
+
+### Bugfixes
+
+#### Skip verification render when authenticated
+
+The verification UI no longer renders for users who are already authenticated, preventing brief flashes of the form during widget initialization.
+
+## Version 0.0.52
+
+### Features
+
+#### Verification UX polish
+
+- Progress bar in the verification UI to indicate flow completion
+- Updated success copy and resend behavior
+- Email confirmation step before scheduling appointments
+
+## Version 0.0.50
+
+### Features
+
+#### Auto-send OTP
+
+When the agent supplies a phone or email during conversation, the SDK auto-sends the OTP without requiring a separate user action. This streamlines verification when the agent has already collected the user's contact info.
+
+### Bugfixes
+
+#### Hide raw artifact tag bodies
+
+Raw artifact tag content is now hidden from the inline message bubble during streaming. The previous behavior briefly exposed JSON to users mid-stream.
+
+#### Auth refresh gating
+
+`isAuthenticated` is gated on a live WebSocket connection, and authentication state is cleared on refresh failure. Previously, stale auth state could persist after a failed refresh.
+
+## Version 0.0.49
+
+### Features
+
+#### Scheduling progress artifact
+
+The agent can now emit a `scheduling_progress` artifact during multi-step flows. The SDK renders it as a pinned progress bar at the top of the chat modal and hides the tag from inline messages. See [Artifacts → Scheduling progress artifact](/artifacts#scheduling-progress-artifact) for the full type definition.
+
+## Version 0.0.48
+
+### Features
+
+#### Pre-fill verification inputs from host config
+
+The widget can pre-fill phone or email fields in the verification UI using values supplied by the host application. Useful when your app already knows part of the user's contact info before they reach the chat.
+
+## Version 0.0.47
+
+### Features
+
+#### Emphasis flag on prompt suggestions
+
+`VanillaChatPromptSuggestion` now supports an `emphasis: "primary"` flag that renders a chip as a solid, conspicuous call-to-action. Use it to highlight the most likely starter action like "View or change my appointment". See [Quickstart → Concierge mode](/quickstart#concierge-mode) for examples.
+
+## Version 0.0.45
+
+### Features
+
+#### Configurable concierge panel mode
+
+A new `displayMode: "concierge"` lets you swap the collapsed trigger bar for a full panel layout with intro copy and prompt chips. Configure the panel via the `concierge` option (intro text, suggestions, alignment). See [Quickstart → Concierge mode](/quickstart#concierge-mode) for the full API.

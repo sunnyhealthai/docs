@@ -125,6 +125,10 @@ The SDK manages WebSocket connections automatically:
 6. **Reconnection**: Automatically reconnect on failure
 7. **Cleanup**: Close connection when `chat.destroy()` is called
 
+### WebSocket session vs conversation
+
+The server may assign a new WebSocket **session** when a connection drops and reconnects — the SDK does not resume the previous `session_id`. **Conversation** identity is independent: `conversation_id`, the in-memory conversations map, and `activeConversationId` are kept for the lifetime of the SDK instance (same tab). The next `sendMessage` continues the same conversation on the new transport session. Interrupted assistant streams are finalized — the spinner is cleared and any partial text is preserved — when the socket closes.
+
 ## Events
 
 The SDK uses an event-driven architecture. Subscribe to events via `chat.client` to update your UI:
