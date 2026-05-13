@@ -177,7 +177,11 @@ const chat = createSunnyChat({
     suggestions: [
       "I need a dental cleaning",
       "I need to see a specialist",
-      { label: "View or change my appointment", emphasis: "primary" },
+      {
+        label: "View or change my appointment",
+        emphasis: "primary",
+        requiresAuth: true,
+      },
     ],
     align: "left", // or "center"
   },
@@ -186,11 +190,30 @@ const chat = createSunnyChat({
 
 Each suggestion entry is either a plain string (used as both label and prompt) or a `VanillaChatPromptSuggestion`:
 
-| Field      | Description                                                            |
-| ---------- | ---------------------------------------------------------------------- |
-| `label`    | Text shown on the chip                                                 |
-| `prompt`   | Optional prompt sent on click (defaults to `label`)                    |
-| `emphasis` | `"primary"` renders a solid, conspicuous call-to-action chip           |
+| Field          | Description                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------- |
+| `label`        | Text shown on the chip                                                                            |
+| `prompt`       | Optional prompt sent on click (defaults to `label`)                                               |
+| `emphasis`     | `"primary"` renders a solid, conspicuous call-to-action chip                                      |
+| `requiresAuth` | When `true` and the user is anonymous, clicking the chip opens the OTP card up front; see below   |
+
+### Auth-gated suggestions
+
+Set `requiresAuth: true` on suggestions whose prompts only make sense for an identified user — *"View or change my appointment"*, *"Show me my benefits"*, anything personalized. When an anonymous user clicks the chip:
+
+1. The modal expands.
+2. The user's bubble appears immediately (so they see their intent registered).
+3. The verification card renders as the first assistant reply with the phone + email options.
+4. The prompt is **held** — nothing reaches the agent yet.
+5. On successful OTP, the held prompt is delivered as the user's first real message; the agent responds to it directly instead of needing a second round-trip after `auth_success`.
+
+If the same suggestion is clicked by a user who is **already authenticated** (via `passwordlessAuth` or via the SDK's token-exchange path — `idTokenProvider`), the gate is satisfied and the suggestion sends normally.
+
+If `requiresAuth: true` is set but no auth method is configured at all, the verification card renders its configuration-error message instead of letting the gated prompt slip through silently.
+
+#### Retry-on-send-failure
+
+In the rare case where OTP succeeds but the held prompt fails to deliver (network blip mid-handoff), the verification card stays on screen with a single **Retry sending** button and an inline error. Clicking it re-attempts the send — it does NOT restart the OTP flow for a user who is already verified.
 
 ## React example
 
