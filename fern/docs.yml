@@ -19,7 +19,7 @@ products:
 navbar-links:
   - type: minimal
     text: GitHub
-    url: https://github.com/sunnyhealthai/agents-sdk
+    url: https://github.com/sunnyhealthai/sunny-agents-sdk
   - type: filled
     text: Get Support
     url: mailto:support@sunnyhealthai.com
