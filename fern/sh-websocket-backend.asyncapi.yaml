@@ -1258,13 +1258,20 @@ components:
 
     AuthUpgradeInsurance:
       type: object
-      required: [partner_plan_id, member_id, group_id]
-      description: Insurance record sent with auth.upgrade. Backend resolves via enterprise partner plans.
+      required: [member_id, group_id]
+      description: >-
+        Insurance record sent with auth.upgrade. Backend resolves via enterprise
+        partner plans. Provide exactly one of `partner_plan_id` or `plan_alias`.
       properties:
         partner_plan_id:
           type: string
           format: uuid
-          description: Partner plan ID (from enterprise configuration).
+          description: Partner plan ID (from enterprise configuration). Provide this OR `plan_alias`.
+        plan_alias:
+          type: string
+          description: >-
+            Developer-defined plan alias, resolved at runtime against the partner's
+            configured aliases. Provide this OR `partner_plan_id`.
         member_id:
           type: string
         group_id:

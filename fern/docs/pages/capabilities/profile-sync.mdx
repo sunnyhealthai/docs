@@ -137,15 +137,28 @@ interface AuthUpgradeAddress {
 
 ### Insurance
 
-Insurance plan records. The `partner_plan_id` is a UUID that maps to a plan configured in Sunny Central for your partner. Requires `partnerIdentifier` on the SDK connection.
+Insurance plan records. Reference the plan with **exactly one** of `partner_plan_id` (the plan's UUID from Sunny Central) or `plan_alias` (a developer-defined alias configured for your partner). Aliases let you use a stable, human-readable identifier instead of managing raw UUIDs, and are resolved at runtime, scoped to your partner. Either way, this requires `partnerIdentifier` on the SDK connection.
 
 ```typescript
 interface AuthUpgradeInsurance {
-  partner_plan_id: string; // UUID from Sunny Central
+  partner_plan_id?: string; // UUID from Sunny Central -- provide this OR plan_alias
+  plan_alias?: string;      // developer-defined alias -- provide this OR partner_plan_id
   member_id: string;
   group_id: string;
 }
 ```
+
+Referencing a plan by alias:
+
+```typescript
+authUpgradeProfileSync: {
+  insurances: [
+    { plan_alias: "gold-ppo-2024", member_id: "M001", group_id: "G100" },
+  ],
+}
+```
+
+Manage your partner's plans and aliases from the Sunny Central dashboard. Reach out to your Sunny integration owner if you need a plan or alias added.
 
 ### Dependents
 

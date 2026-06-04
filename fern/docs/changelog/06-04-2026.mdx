@@ -1,0 +1,23 @@
+---
+title: June 4, 2026
+slug: 06-04-2026
+tags: ["v0.0.65", "profile-sync", "insurance"]
+---
+
+## Version 0.0.65
+
+### Features
+
+#### Reference insurance plans by alias
+
+`AuthUpgradeInsurance` now accepts a `plan_alias` as an alternative to `partner_plan_id`. Provide exactly one: the plan's UUID, or a developer-defined alias configured for your partner (e.g. `gold-ppo-2024`). Aliases give you a stable, human-readable identifier so you no longer have to manage raw plan UUIDs, and are resolved at runtime, scoped to your partner.
+
+```typescript
+authUpgradeProfileSync: {
+  insurances: [
+    { plan_alias: "gold-ppo-2024", member_id: "M001", group_id: "G100" },
+  ],
+}
+```
+
+`partner_plan_id` continues to work unchanged. Manage your partner's plans and aliases from the Sunny Central dashboard. See [Profile Sync → Insurance](/ask-sunny/profile-sync#insurance) for the full type definition.
