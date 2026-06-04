@@ -11,7 +11,7 @@ This guide shows you how to integrate the Sunny Agents SDK into your application
 <Steps>
 <Step title="Get your credentials">
 
-Sign in to [Sunny Central](https://platform.sunnyhealthai.com) (or [staging](https://platform.sunnyhealthai-staging.com)) and go to **Developer Tools**. Create an API key and note your partner name. See [Partner Setup](/partner-setup) for details.
+Sign in to [Sunny Central](https://platform.sunnyhealthai.com) (or [staging](https://platform.sunnyhealthai-staging.com)) and go to **Developer Tools**. Create an API key and note your partner name. See [Partner Setup](/ask-sunny/partner-setup) for details.
 
 </Step>
 
@@ -100,7 +100,7 @@ const chat = createSunnyChat({
 |--------|-------------|
 | `client` | The underlying client for programmatic control (events, sending messages, state) |
 | `destroy()` | Unmount the widget and close the WebSocket connection |
-| `setAuthType(authType, opts?)` | Switch authentication mode at runtime (see [Authentication](/authentication#runtime-auth-type-switching)) |
+| `setAuthType(authType, opts?)` | Switch authentication mode at runtime (see [Authentication](/ask-sunny/authentication#runtime-auth-type-switching)) |
 
 ## Programmatic control
 
@@ -228,21 +228,21 @@ export function ChatWidget() {
   <Card
     title="Authentication"
     icon="duotone lock"
-    href="/authentication"
+    href="/ask-sunny/authentication"
   >
     Set up authenticated sessions
   </Card>
   <Card
     title="Artifacts"
     icon="duotone box"
-    href="/artifacts"
+    href="/ask-sunny/artifacts"
   >
     Parse and render rich content
   </Card>
   <Card
     title="Key Concepts"
     icon="duotone lightbulb"
-    href="/concepts"
+    href="/ask-sunny/concepts"
   >
     Events, state management, and more
   </Card>

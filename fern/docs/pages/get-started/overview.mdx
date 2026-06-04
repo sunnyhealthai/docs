@@ -28,30 +28,30 @@ The SDK is designed specifically for healthcare applications:
 ## Core capabilities
 
 <CardGroup cols={2}>
-  <Card title="Authentication" icon="duotone lock" href="/authentication">
+  <Card title="Authentication" icon="duotone lock" href="/ask-sunny/authentication">
     Two authentication methods: custom token exchange and passwordless email/SMS. Automatic token management and refresh.
   </Card>
-  <Card title="Profile Sync" icon="duotone arrows-rotate" href="/profile-sync">
+  <Card title="Profile Sync" icon="duotone arrows-rotate" href="/ask-sunny/profile-sync">
     Pre-populate user profiles, addresses, insurance, and dependents during authentication. Supports static data and async providers.
   </Card>
-  <Card title="Artifacts" icon="duotone box" href="/artifacts">
+  <Card title="Artifacts" icon="duotone box" href="/ask-sunny/artifacts">
     Rich content delivered inline in messages via WebSocket. Parse embedded JSON for doctor profiles and structured data.
   </Card>
-  <Card title="Key Concepts" icon="duotone lightbulb" href="/concepts">
+  <Card title="Key Concepts" icon="duotone lightbulb" href="/ask-sunny/concepts">
     Conversations, messages, events, MCP approvals, file attachments, and state management.
   </Card>
-  <Card title="API Reference" icon="duotone code" href="/api-reference">
+  <Card title="API Reference" icon="duotone code" href="/ask-sunny/api-reference/api-reference/authentication/token-exchange">
     REST and WebSocket API schemas and message types.
   </Card>
 </CardGroup>
 
 ## Partner setup
 
-`publicKey` and `partnerIdentifier` are obtained from **Sunny Central**, the partner portal. Sign in at [platform.sunnyhealthai.com](https://platform.sunnyhealthai.com) (production) or [platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com) (staging), then go to **Developer Tools** to create API keys, view your partner name, and configure authentication (allowed domains and token exchange). See [Partner Setup](/partner-setup) for details.
+`publicKey` and `partnerIdentifier` are obtained from **Sunny Central**, the partner portal. Sign in at [platform.sunnyhealthai.com](https://platform.sunnyhealthai.com) (production) or [platform.sunnyhealthai-staging.com](https://platform.sunnyhealthai-staging.com) (staging), then go to **Developer Tools** to create API keys, view your partner name, and configure authentication (allowed domains and token exchange). See [Partner Setup](/ask-sunny/partner-setup) for details.
 
 ## How it works
 
-`createSunnyChat` fetches your partner's auth configuration from the server via the [`/sdk/config`](/api-reference/configuration/get-sdk-config) endpoint, activates the chosen authentication mode, and renders a chat widget in your container. The WebSocket connection is established when the user sends their first message.
+`createSunnyChat` fetches your partner's auth configuration from the server via the [`/sdk/config`](/ask-sunny/api-reference/api-reference/configuration/get-sdk-config) endpoint, activates the chosen authentication mode, and renders a chat widget in your container. The WebSocket connection is established when the user sends their first message.
 
 <Accordion title="Architecture diagram">
 ```mermaid
@@ -161,16 +161,16 @@ yarn add @sunnyhealthai/agents-sdk
 ## Getting help
 
 <CardGroup cols={2}>
-  <Card title="Quickstart guide" icon="duotone rocket" href="/quickstart">
+  <Card title="Quickstart guide" icon="duotone rocket" href="/ask-sunny/quickstart">
     Get up and running in minutes
   </Card>
-  <Card title="API reference" icon="duotone code" href="/api-reference">
+  <Card title="API reference" icon="duotone code" href="/ask-sunny/api-reference/api-reference/authentication/token-exchange">
     REST and WebSocket API schemas
   </Card>
-  <Card title="Authentication" icon="duotone lock" href="/authentication">
+  <Card title="Authentication" icon="duotone lock" href="/ask-sunny/authentication">
     Authentication modes and setup
   </Card>
-  <Card title="Concepts" icon="duotone lightbulb" href="/concepts">
+  <Card title="Concepts" icon="duotone lightbulb" href="/ask-sunny/concepts">
     Learn core concepts and patterns
   </Card>
 </CardGroup>
