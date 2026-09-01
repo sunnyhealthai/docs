@@ -1,0 +1,114 @@
+---
+title: May 13, 2026
+slug: 05-13-2026
+tags: ["v0.0.60", "v0.0.59", "v0.0.58", "v0.0.57", "v0.0.56"]
+---
+
+This changelog covers SDK versions 0.0.56 through 0.0.60, accumulated since the [May 4, 2026 release](./05-04-2026). The headline changes: a redesigned verification card (country picker + digit-bubble phone), a completion-bubble progress indicator that lights up in any order, and a `requiresAuth` flag on suggestion chips that opens the OTP card up front for auth-gated prompts.
+
+## Version 0.0.60
+
+### Bugfixes
+
+#### Verified-user retry path on held-prompt delivery failure
+
+When `requiresAuth` was set on a suggestion and OTP succeeded but the held prompt failed to deliver (network blip mid-handoff), the previous flow rolled back to the OTP entry form — so the action button read **"Send Code"** and clicking it would re-run the entire OTP flow for an already-verified user. The verification card now has a third state (`verifiedAwaitingSend`) that hides the email/phone inputs and OTP digit cells and shows a single **"Retry sending"** button. The retry routes through the same send helper as the initial post-OTP delivery, so success/failure handling stays consistent and the user never has to re-verify.
+
+The retry button is also guarded against double-clicks via the existing in-flight flag.
+
+#### `requiresAuth` honors token-exchange auth
+
+The auth-gated suggestion gate previously only checked `passwordlessAuth?.isAuthenticated()`. Hosts that authenticate via the SDK's token-exchange path (`idTokenProvider`) — i.e. `anonymous === false` — were being unnecessarily forced into the OTP card even though they're already logged in. The gate now satisfies on either auth mode.
+
+## Version 0.0.59
+
+### Features
+
+#### Completion-bubble progress UI
+
+The pinned scheduling-progress UI is now a `✨` shimmer label plus a row of small bubbles in canonical chat-flow order:
+
+```text
+✨  Booking your appointment…
+●─●─○─○─○─●─○─○
+↑  ↑        ↑
+reason plan   patient (volunteered up front)
+```
+
+Each bubble checks off when its step id appears in the artifact's `completed_steps` array. Bubbles fill in **any order** — out-of-order completion is the point: if the user supplies their group ID in their first message, the `insurance` bubble lights up immediately even though it sits near the end of the row. Hover/aria reveals each step's label.
+
+The artifact shape was extended:
+
+```typescript
+interface SchedulingProgressArtifact {
+  completed_steps?: string[];          // NEW — primary mechanism
+  flow?: "schedule" | "reschedule" | "cancel";
+  completed?: boolean;
+  current_step?: number;               // deprecated
+  total_steps?: number;                // deprecated
+  step_label?: string;                 // deprecated
+}
+```
+
+Per-flow id vocabulary lives in [Artifacts → Scheduling progress artifact](/capabilities/artifacts#scheduling-progress-artifact). Legacy payloads using `current_step` / `total_steps` still work — the widget infers the done-set from `1..current_step-1` against the canonical list.
+
+#### Hardened tag parser
+
+The `{scheduling_progress}` parser now always consumes the tag span regardless of body shape, so unknown / future payload shapes can never leak as raw JSON into the chat bubble. Input is also normalized for common LLM hallucinations — backtick-wrapped variants (`` `{tag}` ``) and bracket-form (`[tag]`) get coerced to the canonical curly form before the splitter runs, using an `indexOf`-based loop so the previous regex's polynomial-backtracking surface (flagged by CodeQL) is eliminated.
+
+## Version 0.0.58
+
+### Features
+
+#### Per-suggestion `requiresAuth` gate
+
+`VanillaChatPromptSuggestion` now accepts an optional `requiresAuth?: boolean`. Mark a chip auth-gated and an anonymous user clicking it triggers the OTP card immediately — no waiting for the agent to round-trip and emit `{verification_flow}`. The user's intent bubble appears optimistically, the verification card renders as the first assistant reply, and on successful OTP the held prompt sends as the user's first real message.
+
+```typescript
+createSunnyChat({
+  // ...
+  concierge: {
+    suggestions: [
+      { label: "I'm feeling sick" },                              // no auth needed
+      { label: "Show my past appointments", requiresAuth: true }, // OTP up front
+      { label: "Reschedule my appointment",  requiresAuth: true },
+    ],
+  },
+});
+```
+
+Authenticated users and suggestions without `requiresAuth` fall through to the existing send path. See [Quickstart → Auth-gated suggestions](/get-started/quickstart#auth-gated-suggestions) for the full flow.
+
+## Version 0.0.57
+
+### Features
+
+#### Custom country picker (closed state shows the flag only)
+
+The native `<select>` for the verification phone region — which truncated to `+...` on narrow viewports — is replaced with a custom popover. Closed state shows only the flag emoji; open state shows `🇺🇸 United States (+1)` rows with a search box and keyboard navigation. Country data + calling codes come from [libphonenumber-js](https://www.npmjs.com/package/libphonenumber-js); localized names via `Intl.DisplayNames`; flag emojis computed from ISO-2 regional indicator codepoints.
+
+Outside-click handlers attach only while the popover is open, so re-renders don't leak listeners.
+
+#### Digit-bubble phone input with per-country masks
+
+The single `<input type="tel">` is replaced with masked digit cells — `(___) ___-____` for the US, `_____ ______` for the UK, `__ __ __ __ __` for France, and so on. The mask is derived from libphonenumber-js example numbers + `AsYouType`, so the format is correct per country. Long country names in the popover (e.g. *"Saint Vincent and the Grenadines"*) wrap to a second line rather than truncating.
+
+#### E.164 normalization on submit
+
+Phone numbers are parsed via `parsePhoneNumberFromString(digits, iso)` and submitted as E.164. Trunk-prefixed locales (UK/DE/FR/IN/IT — countries where users habitually type a leading 0) get the trunk prefix stripped correctly, fixing OTP delivery failures for those users. Invalid input surfaces an inline error before any OTP request is fired.
+
+#### Empty assistant rows skipped
+
+Standalone `{scheduling_progress}` messages no longer leave blank assistant cards in the chat stream. The progress side-effect still fires; the empty bubble is simply not appended.
+
+#### Accessibility refinements
+
+The bubble strip exposes per-step labels to assistive tech under the parent `role="status" aria-live="polite"` region. The decorative ✨ stays `aria-hidden`. All animations respect `prefers-reduced-motion`.
+
+## Version 0.0.56
+
+### Bugfixes
+
+#### Hide partial artifact-tag prefix during streaming
+
+While the LLM was still typing the opening of a known artifact tag (text ending in `{schedul`, `{verification_flo`, etc.), the partial tag would briefly flash as raw text in the bubble. The streaming text is now truncated at the trailing prefix of any known open tag so nothing renders until the close arrives on a later chunk.

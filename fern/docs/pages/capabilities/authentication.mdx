@@ -57,6 +57,17 @@ const chat = createSunnyChat({
 - Automatic token management
 - In-chat verification UI
 
+#### Verification UI
+
+The verification card in the chat ships with a polished phone-entry experience powered by [libphonenumber-js](https://www.npmjs.com/package/libphonenumber-js):
+
+- **Country picker.** A searchable popover with a flag emoji, localized country name, and `(+code)` for every entry libphonenumber-js exposes. When the popover is closed, only the flag is visible — no more `+...` truncation on narrow viewports. Keyboard nav (`ArrowUp`/`ArrowDown`/`Enter`/`Escape`) and typing-to-filter ("Bel" → Belgium / Belize / Belarus) are supported.
+- **Digit-bubble phone field.** Per-country masked cells — `(___) ___-____` for the US, `_____ ______` for the UK, `__ __ __ __ __` for France, and so on. The mask is derived from libphonenumber-js example numbers + `AsYouType`, so the format is correct for every country in the picker.
+- **E.164 normalization on submit.** Phone numbers are parsed with `parsePhoneNumberFromString(digits, iso)` and submitted as E.164 so trunk-prefixed locales (UK/DE/FR/IN/IT) get the leading 0 stripped correctly. Invalid input surfaces an inline error before any OTP is sent.
+- **Six-cell OTP entry.** The existing six-cell code input (paste-aware, auto-advance, backspace-navigation) is unchanged.
+
+You can pre-fill phone or email via the `verificationPrefill` option on `createSunnyChat` if your app already has the value; see the [Auth-gated suggestions](/quickstart#auth-gated-suggestions) section in Quickstart for the alternative up-front-OTP flow.
+
 ## Authentication flow
 
 When using `createSunnyChat`, auth configuration is fetched via **HTTP** from the [`/sdk/config`](/ask-sunny/api-reference/api-reference/configuration/get-sdk-config) endpoint _before_ any WebSocket connection is established:
